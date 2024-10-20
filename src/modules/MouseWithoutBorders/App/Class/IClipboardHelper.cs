@@ -24,6 +24,7 @@ using StreamJsonRpc;
 #if !MM_HELPER
 using MouseWithoutBorders.Class;
 using MouseWithoutBorders.Core;
+using Thread = MouseWithoutBorders.Core.Thread;
 #endif
 
 using SystemClipboard = System.Windows.Forms.Clipboard;
