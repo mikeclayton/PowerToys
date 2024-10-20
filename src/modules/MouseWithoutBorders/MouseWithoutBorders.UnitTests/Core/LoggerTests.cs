@@ -109,12 +109,14 @@ public static class LoggerTests
             using var streamReader = new StreamReader(stream);
             var expected = streamReader.ReadToEnd();
 
-            // copied from DumpObjects in Common.Log.cs
+            // this is what we're actually testing - copied from DumpObjects in Logger.cs
             var sb = new StringBuilder(1000000);
             _ = Logger.PrivateDump(sb, Logger.AllLogs, "[Program logs]\r\n===============\r\n", 0, settingsDumpObjectsLevel, false);
             _ = Logger.PrivateDump(sb, new Common(), "[Other Logs]\r\n===============\r\n", 0, settingsDumpObjectsLevel, false);
-            sb.AppendLine("[Logger Logs]\r\n===============");
+            sb.AppendLine("[Logger]\r\n===============");
             Logger.DumpType(sb, typeof(Logger), 0, settingsDumpObjectsLevel);
+            sb.AppendLine("[Receiver]\r\n===============");
+            Logger.DumpType(sb, typeof(Receiver), 0, settingsDumpObjectsLevel);
             var actual = sb.ToString();
 
             expected = NormalizeLog(expected);
