@@ -35,7 +35,7 @@ internal static class Receiver
     internal static long skippedPackageCount;
 #pragma warning restore SA1307
 
-    internal static long JustGotAKey { get; set; }
+    private static long JustGotAKey { get; set; }
 
     private static bool PreProcess(DATA package)
     {
