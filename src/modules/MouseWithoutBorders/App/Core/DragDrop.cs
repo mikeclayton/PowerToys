@@ -128,7 +128,7 @@ internal static class DragDrop
 
     private static int dragDropStep05ExCalledByIpc;
 
-    internal static void DragDropStep04()
+    private static void DragDropStep04()
     {
         if (!IsDropping)
         {
@@ -176,7 +176,7 @@ internal static class DragDrop
         Logger.LogDebug("DragDropStep04: Got WM_CHECK_EXPLORER_DRAG_DROP, done with processing jump to DragDropStep05...");
     }
 
-    internal static void DragDropStep05Ex(string dragFileName)
+    private static void DragDropStep05Ex(string dragFileName)
     {
         Logger.LogDebug("DragDropStep05 called.");
 
@@ -275,7 +275,7 @@ internal static class DragDrop
         }
     }
 
-    internal static void DragDropStep10()
+    private static void DragDropStep10()
     {
         Logger.LogDebug("DragDropStep10: Hide the form and get data...");
         IsDropping = false;
@@ -315,7 +315,7 @@ internal static class DragDrop
         });
     }
 
-    internal static void SendCheckExplorerDragDrop()
+    private static void SendCheckExplorerDragDrop()
     {
         DATA package = new();
         package.Type = PackageType.ExplorerDragDrop;
@@ -366,18 +366,18 @@ internal static class DragDrop
         }
     }
 
-    internal static void SendClipboardBeatDragDrop()
+    private static void SendClipboardBeatDragDrop()
     {
         Common.SendPackage(ID.ALL, PackageType.ClipboardDragDrop);
     }
 
-    internal static void SendDropBegin()
+    private static void SendDropBegin()
     {
         Logger.LogDebug("SendDropBegin...");
         Common.SendPackage(Common.dropMachineID, PackageType.ClipboardDragDropOperation);
     }
 
-    internal static void SendClipboardBeatDragDropEnd()
+    private static void SendClipboardBeatDragDropEnd()
     {
         if (Common.desMachineID != Common.MachineID)
         {
@@ -400,5 +400,9 @@ internal static class DragDrop
         set => DragDrop.isDropping = value;
     }
 
-    internal static bool MouseDown { get; set; }
+    internal static bool MouseDown
+    {
+        get;
+        set;
+    }
 }
