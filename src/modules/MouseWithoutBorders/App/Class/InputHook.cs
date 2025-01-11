@@ -225,7 +225,7 @@ namespace MouseWithoutBorders.Class
                     if (Common.NewDesMachineID == Common.MachineID || Common.NewDesMachineID == ID.ALL)
                     {
                         local = true;
-                        if (Common.MainFormVisible && !Common.IsDropping)
+                        if (Common.MainFormVisible && !DragDrop.IsDropping)
                         {
                             Common.MainFormDot();
                         }
@@ -315,8 +315,8 @@ namespace MouseWithoutBorders.Class
 
                         MouseEvent(hookCallbackMouseData, dx, dy);
 
-                        Common.DragDropStep01(wParam);
-                        Common.DragDropStep09(wParam);
+                        DragDrop.DragDropStep01(wParam);
+                        DragDrop.DragDropStep09(wParam);
                     }
 
                     if (local)

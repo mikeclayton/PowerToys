@@ -55,11 +55,11 @@ namespace MouseWithoutBorders
         internal static ID desMachineID;
 #pragma warning restore SA1307
         internal static string DesMachineName = string.Empty;
-        private static ID newDesMachineID;
+        internal static ID newDesMachineID;
 #pragma warning disable SA1307 // Accessible fields should begin with upper-case letter
         internal static ID newDesMachineIdEx;
 #pragma warning restore SA1307
-        private static ID dropMachineID;
+        internal static ID dropMachineID;
 
         private static long lastJump = Common.GetTick();
         private static MyRectangle desktopBounds = new();

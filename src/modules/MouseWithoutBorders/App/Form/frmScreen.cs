@@ -606,7 +606,7 @@ namespace MouseWithoutBorders
 
         private void FrmScreen_MouseMove(object sender, MouseEventArgs e)
         {
-            if (!Common.IsDropping)
+            if (!DragDrop.IsDropping)
             {
                 if (Cursor != dotCur)
                 {
