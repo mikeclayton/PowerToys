@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using MouseWithoutBorders.Core;
 
 namespace MouseWithoutBorders
 {
@@ -12,7 +13,7 @@ namespace MouseWithoutBorders
         {
             InitializeComponent();
 
-            Common.ClearComputerMatrix();
+            MachineStuff.ClearComputerMatrix();
         }
 
         private void NoButtonClick(object sender, EventArgs e)

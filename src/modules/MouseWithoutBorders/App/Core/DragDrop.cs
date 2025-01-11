@@ -70,8 +70,8 @@ internal static class DragDrop
         if (wParam == Common.WM_LBUTTONDOWN)
         {
             MouseDown = true;
-            DragMachine = Common.desMachineID;
-            Common.dropMachineID = ID.NONE;
+            DragMachine = MachineStuff.desMachineID;
+            MachineStuff.dropMachineID = ID.NONE;
             Logger.LogDebug("DragDropStep01: MouseDown");
         }
         else if (wParam == Common.WM_LBUTTONUP)
@@ -89,7 +89,7 @@ internal static class DragDrop
 
     internal static void DragDropStep02()
     {
-        if (Common.desMachineID == Common.MachineID)
+        if (MachineStuff.desMachineID == Common.MachineID)
         {
             Logger.LogDebug("DragDropStep02: SendCheckExplorerDragDrop sent to myself");
             Common.DoSomethingInUIThread(() =>
@@ -114,7 +114,7 @@ internal static class DragDrop
         if (package.Des == Common.MachineID || package.Des == ID.ALL)
         {
             Logger.LogDebug("DragDropStep03: ExplorerDragDrop Received.");
-            Common.dropMachineID = package.Src; // Drop machine is the machine that sent ExplorerDragDrop
+            MachineStuff.dropMachineID = package.Src; // Drop machine is the machine that sent ExplorerDragDrop
             if (MouseDown || IsDropping)
             {
                 Logger.LogDebug("DragDropStep03: Mouse is down, check if dragging...sending WM_CHECK_EXPLORER_DRAG_DROP to myself...");
@@ -128,7 +128,7 @@ internal static class DragDrop
 
     private static int dragDropStep05ExCalledByIpc;
 
-    private static void DragDropStep04()
+    internal static void DragDropStep04()
     {
         if (!IsDropping)
         {
@@ -197,9 +197,9 @@ internal static class DragDrop
                     /*
                      * possibleDropMachineID is used as desID sent in DragDropStep06();
                      * */
-                    if (Common.dropMachineID == ID.NONE)
+                    if (MachineStuff.dropMachineID == ID.NONE)
                     {
-                        Common.dropMachineID = Common.newDesMachineID;
+                        MachineStuff.dropMachineID = MachineStuff.newDesMachineID;
                     }
 
                     DragDropStep06();
@@ -245,7 +245,7 @@ internal static class DragDrop
         if (package.Des == Common.MachineID && !Common.RunOnLogonDesktop && !Common.RunOnScrSaverDesktop)
         {
             IsDropping = true;
-            Common.dropMachineID = Common.MachineID;
+            MachineStuff.dropMachineID = Common.MachineID;
             Logger.LogDebug("DragDropStep08_2: ClipboardDragDropOperation Received. IsDropping set");
         }
     }
@@ -326,9 +326,9 @@ internal static class DragDrop
          * new des machine since the previous des machine will get this and set
          * to possibleDropMachineID in DragDropStep3()
          * */
-        package.Src = Common.newDesMachineID;
+        package.Src = MachineStuff.newDesMachineID;
 
-        package.Des = Common.desMachineID;
+        package.Des = MachineStuff.desMachineID;
         package.MachineName = Common.MachineName;
 
         Common.SkSend(package, null, false);
@@ -340,7 +340,7 @@ internal static class DragDrop
         // newDesMachineID = new drop machine
 
         // 1. Cancelling dropping in current drop machine
-        if (Common.dropMachineID == Common.MachineID)
+        if (MachineStuff.dropMachineID == Common.MachineID)
         {
             // Drag/Drop coming through me
             IsDropping = false;
@@ -353,9 +353,9 @@ internal static class DragDrop
 
         // 2. SendClipboardBeatDragDrop to new drop machine
         // new drop machine is not me
-        if (Common.newDesMachineID != Common.MachineID)
+        if (MachineStuff.newDesMachineID != Common.MachineID)
         {
-            Common.dropMachineID = Common.newDesMachineID;
+            MachineStuff.dropMachineID = MachineStuff.newDesMachineID;
             SendDropBegin();
         }
 
@@ -374,14 +374,14 @@ internal static class DragDrop
     private static void SendDropBegin()
     {
         Logger.LogDebug("SendDropBegin...");
-        Common.SendPackage(Common.dropMachineID, PackageType.ClipboardDragDropOperation);
+        Common.SendPackage(MachineStuff.dropMachineID, PackageType.ClipboardDragDropOperation);
     }
 
     private static void SendClipboardBeatDragDropEnd()
     {
-        if (Common.desMachineID != Common.MachineID)
+        if (MachineStuff.desMachineID != Common.MachineID)
         {
-            Common.SendPackage(Common.desMachineID, PackageType.ClipboardDragDropEnd);
+            Common.SendPackage(MachineStuff.desMachineID, PackageType.ClipboardDragDropEnd);
         }
     }
 

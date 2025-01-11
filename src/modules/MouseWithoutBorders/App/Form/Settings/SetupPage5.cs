@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using MouseWithoutBorders.Core;
 
 namespace MouseWithoutBorders
 {
@@ -16,8 +17,8 @@ namespace MouseWithoutBorders
         private void DoneButtonClick(object sender, EventArgs e)
         {
             // SendNextPage(new SettingsPage1());
-            Common.CloseSetupForm();
-            Common.ShowMachineMatrix();
+            MachineStuff.CloseSetupForm();
+            MachineStuff.ShowMachineMatrix();
         }
     }
 }

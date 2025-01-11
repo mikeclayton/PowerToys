@@ -72,7 +72,7 @@ namespace MouseWithoutBorders
 
                 if (switchByMouseEnabled && Sk != null && (DesMachineID == MachineID || !Setting.Values.MoveMouseRelatively) && e.dwFlags == WM_MOUSEMOVE)
                 {
-                    Point p = MoveToMyNeighbourIfNeeded(e.X, e.Y, desMachineID);
+                    Point p = MachineStuff.MoveToMyNeighbourIfNeeded(e.X, e.Y, desMachineID);
 
                     if (!p.IsEmpty)
                     {
