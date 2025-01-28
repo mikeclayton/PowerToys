@@ -2,7 +2,6 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System.Collections.Concurrent;
 using System.Globalization;
 using System.Reflection;
 using System.Text;
@@ -62,6 +61,8 @@ public static class LoggerTests
                     "lastJump = ",
                     "lastStartServiceTime = ",
                     "InitialIV = ",
+                    "--_budget = ",
+                    "--s_contentionCount = ",
                 };
                 for (var i = 0; i < lines.Length; i++)
                 {
@@ -113,8 +114,12 @@ public static class LoggerTests
             var sb = new StringBuilder(1000000);
             _ = Logger.PrivateDump(sb, Logger.AllLogs, "[Program logs]\r\n===============\r\n", 0, settingsDumpObjectsLevel, false);
             _ = Logger.PrivateDump(sb, new Common(), "[Other Logs]\r\n===============\r\n", 0, settingsDumpObjectsLevel, false);
+            sb.AppendLine($"[DragDrop]\r\n===============");
+            Logger.DumpType(sb, typeof(DragDrop), 0, settingsDumpObjectsLevel);
             sb.AppendLine("[Logger]\r\n===============");
             Logger.DumpType(sb, typeof(Logger), 0, settingsDumpObjectsLevel);
+            sb.AppendLine("[MachineStuff]\r\n===============");
+            Logger.DumpType(sb, typeof(MachineStuff), 0, settingsDumpObjectsLevel);
             sb.AppendLine("[Receiver]\r\n===============");
             Logger.DumpType(sb, typeof(Receiver), 0, settingsDumpObjectsLevel);
             var actual = sb.ToString();

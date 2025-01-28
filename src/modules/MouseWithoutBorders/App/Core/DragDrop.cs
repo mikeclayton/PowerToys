@@ -176,7 +176,7 @@ internal static class DragDrop
         Logger.LogDebug("DragDropStep04: Got WM_CHECK_EXPLORER_DRAG_DROP, done with processing jump to DragDropStep05...");
     }
 
-    private static void DragDropStep05Ex(string dragFileName)
+    internal static void DragDropStep05Ex(string dragFileName)
     {
         Logger.LogDebug("DragDropStep05 called.");
 

@@ -38,13 +38,13 @@ internal static class MachineStuff
 #pragma warning restore SA1307
     internal static string DesMachineName = string.Empty;
 #pragma warning disable SA1307 // Accessible fields should begin with upper-case letter
-    private static ID newDesMachineID;
-    private static ID newDesMachineIdEx;
-    private static ID dropMachineID;
+    internal static ID newDesMachineID;
+    internal static ID newDesMachineIdEx;
+    internal static ID dropMachineID;
 #pragma warning restore SA1307
 
-    private static long lastJump = Common.GetTick();
 #pragma warning disable SA1307 // Accessible fields should begin with upper-case letter
+    internal static long lastJump = Common.GetTick();
     internal static MyRectangle desktopBounds = new();
     internal static MyRectangle primaryScreenBounds = new();
 #pragma warning restore SA1307
