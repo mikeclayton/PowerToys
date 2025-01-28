@@ -31,6 +31,7 @@ using System.Xml.Linq;
 using ManagedCommon;
 using Microsoft.PowerToys.Settings.UI.Library.Utilities;
 using Microsoft.PowerToys.Telemetry;
+using MouseWithoutBorders.Messaging;
 using Newtonsoft.Json;
 using StreamJsonRpc;
 
@@ -51,6 +52,9 @@ namespace MouseWithoutBorders.Class
         private static readonly string ServiceModeArg = "UseService";
 
         public static bool ShowServiceModeErrorTooltip;
+
+        public static PacketProducer PacketProducer
+            => Program.CreatePacketProducer();
 
         [STAThread]
         private static void Main()
@@ -229,12 +233,33 @@ namespace MouseWithoutBorders.Class
 
                 Application.Run(formScreen);
 
+                Program.PacketProducer.Queue.Complete();
+
                 etwTrace?.Dispose();
             }
             catch (Exception e)
             {
                 Logger.Log(e);
             }
+        }
+
+        private static PacketProducer CreatePacketProducer()
+        {
+            // make a producer that we'll use to push messages onto a queue
+            var producer = new PacketProducer();
+
+            // create a demo consumer to log the types of packages,
+            // subscribe it to the producer's queue and then start it
+            PacketConsumer loggingConsumer = new(
+                (DATA packet, CancellationToken cancellationToken) =>
+                {
+                    Logger.Log($"received packet of type {packet.Type}");
+                    return Task.CompletedTask;
+                });
+            producer.Queue.Subscribe(loggingConsumer);
+            _ = Task.Run(() => loggingConsumer.StartAsync());
+
+            return producer;
         }
 
         private interface ISettingsSyncHelper

@@ -85,6 +85,11 @@ internal static class Receiver
 
     internal static void ProcessPackage(DATA package, TcpSk tcp)
     {
+#pragma warning disable VSTHRD002
+        Program.PacketProducer.WriteAsync(package)
+            .AsTask().GetAwaiter().GetResult();
+#pragma warning restore VSTHRD002
+
         if (!PreProcess(package))
         {
             return;

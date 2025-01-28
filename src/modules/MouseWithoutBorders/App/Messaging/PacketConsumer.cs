@@ -85,7 +85,7 @@ internal sealed class PacketConsumer
         }
     }
 
-    public void Stop()
+    public void Complete()
     {
         this.Channel.Writer.Complete();
     }

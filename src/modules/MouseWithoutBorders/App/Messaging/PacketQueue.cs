@@ -77,4 +77,25 @@ internal sealed class PacketQueue
 
         return result;
     }
+
+    public void Complete()
+    {
+        foreach (var consumer in this.Consumers)
+        {
+            consumer.Complete();
+        }
+    }
+
+    /// <summary>
+    /// Reads and processes all messages currently on the queue until it is empty.
+    /// Any messages that arrive while draining will be read and processed as well.
+    /// Does *not* "Complete" the queue, just leaves it empty.
+    /// </summary>
+    public async Task DrainAsync(CancellationToken cancellationToken = default)
+    {
+        foreach (var consumer in this.Consumers)
+        {
+            await consumer.DrainAsync(cancellationToken);
+        }
+    }
 }
