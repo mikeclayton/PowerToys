@@ -90,6 +90,10 @@ public static class LoggerTests
                     "------[13] = 0",
                     "------[14] = 0",
                     "------[15] = 0",
+                    "------[16] = 0",
+                    "------[17] = 0",
+                    "------[18] = 0",
+                    "------[19] = 0",
                 };
                 lines = lines.Where(line => !removeLines.Contains(line)).ToArray();
 
