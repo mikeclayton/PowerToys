@@ -26,15 +26,18 @@
     <PackageVersion Include="Markdig.Signed" Version="0.34.0" />
     <!-- Including MessagePack to force version, since it's used by StreamJsonRpc but contains vulnerabilities. After StreamJsonRpc updates the version of MessagePack, we can upgrade StreamJsonRpc instead. -->
     <PackageVersion Include="MessagePack" Version="2.5.187" />
+    <PackageVersion Include="Microsoft.AspNetCore" Version="2.3.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="9.0.3" />
     <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="9.0.2" />
     <!-- Including Microsoft.Bcl.AsyncInterfaces to force version, since it's used by Microsoft.SemanticKernel. -->
-    <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces"  Version="9.0.2" />
+    <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="9.0.2" />
     <PackageVersion Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.1.16" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.3" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="9.0.2" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.2" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.3" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.WindowsServices" Version="9.0.2" />
     <PackageVersion Include="Microsoft.SemanticKernel" Version="1.15.0" />
     <PackageVersion Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.2" />
