@@ -23,11 +23,11 @@ internal sealed class ApiServer
     {
         var builder = WebApplication.CreateBuilder();
 
-        // specify port to listen on
+        // only listen on localhost
         builder.WebHost.ConfigureKestrel(
             options =>
             {
-                options.ListenAnyIP(5002);
+                options.ListenLocalhost(5002);
             });
 
         builder.Services.AddControllers();
