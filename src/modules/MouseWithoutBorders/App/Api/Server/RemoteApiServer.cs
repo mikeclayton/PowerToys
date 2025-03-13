@@ -31,11 +31,11 @@ internal sealed class RemoteApiServer : ApiServerBase
             client.Timeout = TimeSpan.FromMilliseconds(250);
         });
 
-        // only listen on localhost
+        // listen on all ip addresses
         builder.WebHost.ConfigureKestrel(
             options =>
             {
-                options.ListenLocalhost(RemoteApiServer.RemoteApiServerPort);
+                options.ListenAnyIP(RemoteApiServer.RemoteApiServerPort);
             });
 
         // specify the controller types to register

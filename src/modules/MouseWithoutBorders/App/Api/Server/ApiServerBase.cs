@@ -43,8 +43,7 @@ internal class ApiServerBase
         var cancellationTokenSource = new CancellationTokenSource();
         var joinableTask = joinableTaskFactory.RunAsync(async () =>
         {
-            var apiServer = new LocalApiServer();
-            await apiServer.RunAsync(cancellationTokenSource.Token);
+            await this.RunAsync(cancellationTokenSource.Token);
         });
 
         this.JoinableTask = joinableTask;
