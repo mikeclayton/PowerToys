@@ -2,6 +2,8 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,13 +17,13 @@ namespace MouseWithoutBorders.Api.Server;
 
 internal class ApiServerBase
 {
-    private CancellationTokenSource CancellationTokenSource
+    private CancellationTokenSource? CancellationTokenSource
     {
         get;
         set;
     }
 
-    private JoinableTask JoinableTask
+    private JoinableTask? JoinableTask
     {
         get;
         set;
@@ -57,7 +59,7 @@ internal class ApiServerBase
         }
 
         this.CancellationTokenSource.Cancel();
-        this.JoinableTask.Join();
+        (this.JoinableTask ?? throw new InvalidOperationException()).Join();
     }
 
     protected virtual async Task RunAsync(CancellationToken cancellationToken)
