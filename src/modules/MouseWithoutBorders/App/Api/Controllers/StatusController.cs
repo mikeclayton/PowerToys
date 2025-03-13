@@ -2,10 +2,11 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
-
+using System.Net.Http;
 using Microsoft.AspNetCore.Mvc;
 using MouseWithoutBorders.Core;
 
@@ -14,6 +15,16 @@ namespace MouseWithoutBorders.Api.Controllers;
 [ApiController]
 public class StatusController : ControllerBase
 {
+    public StatusController(HttpClient httpClient)
+    {
+        this.HttpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+    }
+
+    private HttpClient HttpClient
+    {
+        get;
+    }
+
     /// <summary>
     /// Invoke-RestMethod "http://localhost:5002/Status/ApiEnabled"
     /// </summary>

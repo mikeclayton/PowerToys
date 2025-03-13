@@ -8,8 +8,10 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Runtime.InteropServices;
-
+using System.Text.Json;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MouseWithoutBorders.Api.Models;
 using MouseWithoutBorders.Class;
@@ -20,6 +22,16 @@ namespace MouseWithoutBorders.Api.Controllers;
 [ApiController]
 public class MachineController : ControllerBase
 {
+    public MachineController(HttpClient httpClient)
+    {
+        this.HttpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+    }
+
+    private HttpClient HttpClient
+    {
+        get;
+    }
+
     /// <summary>
     /// Invoke-RestMethod "http://localhost:5002/Machines/{machineId}/Screens"
     /// </summary>
@@ -28,9 +40,9 @@ public class MachineController : ControllerBase
     /// </returns>
     [HttpGet]
     [Route("Machines/{machineId}/Screens")]
-    public IActionResult Screens(string machineId)
+    public async Task<IActionResult> ScreensAsync(string machineId)
     {
-        ArgumentNullException.ThrowIfNullOrEmpty(machineId);
+        ControllerUtils.ValidateMachineId(machineId);
 
         // check if the machine id is in the machine matrix
         var stringComparer = StringComparison.OrdinalIgnoreCase;
@@ -42,7 +54,7 @@ public class MachineController : ControllerBase
             return BadRequest();
         }
 
-        // check if it's the local machine
+        // check if it's the local machine and use the winapi to get screen topology
         if (string.Equals(matrixId, Environment.MachineName, stringComparer))
         {
             var localMonitorInfo = new List<NativeMethods.MonitorInfoEx>();
@@ -70,9 +82,18 @@ public class MachineController : ControllerBase
             return Ok(screenInfo);
         }
 
-        // must be a remote machine
-        var remoteMonitorInfo = new List<NativeMethods.MonitorInfoEx>();
-        return Ok(remoteMonitorInfo);
+        // must be a remote machine - send a request to the remote api server
+        try
+        {
+            var responseJson = await this.HttpClient.GetStringAsync($"http://{machineId}:5003/Machines/{machineId}/Screens");
+            var responseScreens = JsonSerializer.Deserialize<ScreenInfo[]>(responseJson)
+                ?? throw new InvalidOperationException();
+            return Ok(responseScreens);
+        }
+        catch
+        {
+            return Ok(Array.Empty<ScreenInfo>());
+        }
     }
 
     /// <summary>
@@ -85,6 +106,8 @@ public class MachineController : ControllerBase
     [Route("Machines/{machineId}/Screens/{screenId}/Screenshot")]
     public IActionResult Screenshot(string machineId, int screenId, [FromQuery] int width, [FromQuery] int height)
     {
+        ControllerUtils.ValidateMachineId(machineId);
+
         using var bitmap = new Bitmap(width, height);
         using var graphics = Graphics.FromImage(bitmap);
 
