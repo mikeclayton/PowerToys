@@ -14,6 +14,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MouseWithoutBorders.Api.Models;
+using MouseWithoutBorders.Api.Server;
 using MouseWithoutBorders.Class;
 using MouseWithoutBorders.Core;
 
@@ -33,7 +34,7 @@ public class MachineController : ControllerBase
     }
 
     /// <summary>
-    /// Invoke-RestMethod "http://localhost:5002/Machines/{machineId}/Screens"
+    /// Invoke-RestMethod "http://localhost:15102/Machines/{machineId}/Screens"
     /// </summary>
     /// <returns>
     /// Returns the screen setup on the specified machine.
@@ -85,7 +86,7 @@ public class MachineController : ControllerBase
         // must be a remote machine - send a request to the remote api server
         try
         {
-            var responseJson = await this.HttpClient.GetStringAsync($"http://{machineId}:5003/Machines/{machineId}/Screens");
+            var responseJson = await this.HttpClient.GetStringAsync($"http://{machineId}:{RemoteApiServer.RemoteApiServerPort}/Machines/{machineId}/Screens");
             var responseScreens = JsonSerializer.Deserialize<ScreenInfo[]>(responseJson)
                 ?? throw new InvalidOperationException();
             return Ok(responseScreens);
@@ -97,7 +98,7 @@ public class MachineController : ControllerBase
     }
 
     /// <summary>
-    /// Invoke-RestMethod "http://localhost:5002/Machines/{machineId}/Screens/{screenId}/Screenshot?width=400&height=300"
+    /// Invoke-RestMethod "http://localhost:15102/Machines/{machineId}/Screens/{screenId}/Screenshot?width=400&height=300"
     /// </summary>
     /// <returns>
     /// Returns a screenshot of the specified screen stretched to the requested width and height.

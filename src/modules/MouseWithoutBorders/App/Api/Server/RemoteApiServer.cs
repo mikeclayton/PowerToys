@@ -19,6 +19,8 @@ namespace MouseWithoutBorders.Api.Server;
 
 internal sealed class RemoteApiServer : ApiServerBase
 {
+    public const int RemoteApiServerPort = 15103;
+
     protected override async Task RunAsync(CancellationToken cancellationToken)
     {
         var builder = WebApplication.CreateBuilder();
@@ -33,7 +35,7 @@ internal sealed class RemoteApiServer : ApiServerBase
         builder.WebHost.ConfigureKestrel(
             options =>
             {
-                options.ListenLocalhost(5003);
+                options.ListenLocalhost(RemoteApiServer.RemoteApiServerPort);
             });
 
         // specify the controller types to register

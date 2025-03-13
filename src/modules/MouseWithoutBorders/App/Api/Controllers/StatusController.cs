@@ -26,7 +26,7 @@ public class StatusController : ControllerBase
     }
 
     /// <summary>
-    /// Invoke-RestMethod "http://localhost:5002/Status/ApiEnabled"
+    /// Invoke-RestMethod "http://localhost:15102/Status/ApiEnabled"
     /// </summary>
     /// <returns>
     /// Returns a HTTP 200 response if the api is enabled.

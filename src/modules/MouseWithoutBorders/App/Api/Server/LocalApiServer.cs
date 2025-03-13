@@ -21,6 +21,8 @@ namespace MouseWithoutBorders.Api.Server;
 
 internal sealed class LocalApiServer : ApiServerBase
 {
+    public const int LocalApiServerPort = 15102;
+
     protected override async Task RunAsync(CancellationToken cancellationToken)
     {
         var builder = WebApplication.CreateBuilder();
@@ -35,7 +37,7 @@ internal sealed class LocalApiServer : ApiServerBase
         builder.WebHost.ConfigureKestrel(
             options =>
             {
-                options.ListenLocalhost(5002);
+                options.ListenLocalhost(LocalApiServer.LocalApiServerPort);
             });
 
         // specify the controller types to register
