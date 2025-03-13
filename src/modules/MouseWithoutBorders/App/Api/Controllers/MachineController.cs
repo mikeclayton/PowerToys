@@ -2,6 +2,8 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -76,8 +78,16 @@ public class MachineController : ControllerBase
                 (monitorInfo, index) => new ScreenInfo(
                     id: index,
                     primary: (monitorInfo.dwFlags & MONITORINFOF_PRIMARY) == MONITORINFOF_PRIMARY,
-                    displayArea: new(monitorInfo.rcMonitor),
-                    workingArea: new(monitorInfo.rcWork)))
+                    displayArea: new(
+                        x: monitorInfo.rcMonitor.Left,
+                        y: monitorInfo.rcMonitor.Top,
+                        width: monitorInfo.rcMonitor.Right + monitorInfo.rcMonitor.Left,
+                        height: monitorInfo.rcMonitor.Bottom + monitorInfo.rcMonitor.Top),
+                    workingArea: new(
+                        x: monitorInfo.rcWork.Left,
+                        y: monitorInfo.rcWork.Top,
+                        width: monitorInfo.rcWork.Right + monitorInfo.rcWork.Left,
+                        height: monitorInfo.rcWork.Bottom + monitorInfo.rcWork.Top)))
                 .ToList();
 
             return Ok(screenInfo);

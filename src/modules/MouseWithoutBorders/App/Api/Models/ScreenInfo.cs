@@ -2,6 +2,8 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+#nullable enable
+
 using System;
 using System.Drawing;
 using System.Text.Json.Serialization;
@@ -14,31 +16,34 @@ namespace MouseWithoutBorders.Api.Models;
 /// </summary>
 public sealed record ScreenInfo
 {
-    public ScreenInfo(int id, bool primary, RectangleInfo displayArea, RectangleInfo workingArea)
+    public ScreenInfo(int id, bool primary, RectangleInfo displayArea, RectangleInfo? workingArea)
     {
         this.Id = id;
         this.Primary = primary;
         this.DisplayArea = displayArea ?? throw new ArgumentNullException(nameof(displayArea));
-        this.WorkingArea = workingArea ?? throw new ArgumentNullException(nameof(workingArea));
+        this.WorkingArea = workingArea;
     }
 
+    [JsonPropertyName("id")]
     public int Id
     {
         get;
     }
 
+    [JsonPropertyName("primary")]
     public bool Primary
     {
         get;
     }
 
+    [JsonPropertyName("displayArea")]
     public RectangleInfo DisplayArea
     {
         get;
     }
 
     [JsonIgnore]
-    public RectangleInfo WorkingArea
+    public RectangleInfo? WorkingArea
     {
         get;
     }
