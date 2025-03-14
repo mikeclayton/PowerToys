@@ -15,6 +15,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Windows.Media.Media3D;
 
 // We are sure we dont have managed resource in KEYBDINPUT, IntPtr just holds a value
 [module: SuppressMessage("Microsoft.Design", "CA1049:TypesThatOwnNativeResourcesShouldBeDisposable", Scope = "type", Target = "MouseWithoutBorders.NativeMethods+KEYBDINPUT", Justification = "Dotnet port with style preservation")]
@@ -477,6 +478,11 @@ namespace MouseWithoutBorders.Class
             internal int Top;
             internal int Right;
             internal int Bottom;
+
+            public override string ToString()
+            {
+                return $"{{X={this.Left},Y={this.Top},Width={this.Right - this.Left},Height={this.Bottom - this.Top}}}";
+            }
         }
 
         // size of a device name string
@@ -884,6 +890,7 @@ namespace MouseWithoutBorders.Class
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
         internal class MEMORYSTATUSEX
         {
+#pragma warning disable SA1401 // Field should be private
             public uint dwLength;
             public uint dwMemoryLoad;
             public ulong ullTotalPhys;
@@ -893,6 +900,7 @@ namespace MouseWithoutBorders.Class
             public ulong ullTotalVirtual;
             public ulong ullAvailVirtual;
             public ulong ullAvailExtendedVirtual;
+#pragma warning restore SA1401 // Field should be private
 
             public MEMORYSTATUSEX()
             {

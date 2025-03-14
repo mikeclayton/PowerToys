@@ -27,7 +27,7 @@ internal sealed class RemoteApiServer : ApiServerBase
     {
         var builder = WebApplication.CreateBuilder();
 
-        // add a httpclient that can be accessed by all controllers
+        // add a http client that can be accessed by all controllers
         builder.Services.AddHttpClient("DefaultHttpClient", client =>
         {
             client.Timeout = TimeSpan.FromMilliseconds(250);
@@ -58,7 +58,7 @@ internal sealed class RemoteApiServer : ApiServerBase
 
         var app = builder.Build();
 
-        // http://localhost:5002/openapi/v1.json
+        // http://localhost:15103/openapi/v1.json
         app.MapOpenApi();
 
         app.MapControllers();

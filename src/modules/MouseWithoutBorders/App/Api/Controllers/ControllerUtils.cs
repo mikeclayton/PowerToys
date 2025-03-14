@@ -5,6 +5,11 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.InteropServices;
+
+using MouseWithoutBorders.Api.Models;
 
 namespace MouseWithoutBorders.Api.Controllers;
 
@@ -27,5 +32,40 @@ internal static class ControllerUtils
                 throw new ArgumentException($"Machine ID contains an invalid character. Allowed characters are: {allowedChars}", nameof(machineId));
             }
         }
+    }
+
+    public static List<ScreenInfo> GetLocalScreens()
+    {
+        var localMonitorInfo = new List<Class.NativeMethods.MonitorInfoEx>();
+
+        bool MonitorEnumProc(IntPtr hMonitor, IntPtr hdcMonitor, ref Class.NativeMethods.RECT lprcMonitor, IntPtr dwData)
+        {
+            var mi = default(Class.NativeMethods.MonitorInfoEx);
+            mi.cbSize = Marshal.SizeOf(mi);
+            _ = Class.NativeMethods.GetMonitorInfo(hMonitor, ref mi);
+            localMonitorInfo.Add(mi);
+            return true;
+        }
+
+        Class.NativeMethods.EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, MonitorEnumProc, IntPtr.Zero);
+
+        const int MONITORINFOF_PRIMARY = 0x00000001;
+        var screenInfo = localMonitorInfo.Select(
+            (monitorInfo, index) => new ScreenInfo(
+                id: index,
+                primary: (monitorInfo.dwFlags & MONITORINFOF_PRIMARY) == MONITORINFOF_PRIMARY,
+                displayArea: new(
+                    x: monitorInfo.rcMonitor.Left,
+                    y: monitorInfo.rcMonitor.Top,
+                    width: monitorInfo.rcMonitor.Right - monitorInfo.rcMonitor.Left,
+                    height: monitorInfo.rcMonitor.Bottom - monitorInfo.rcMonitor.Top),
+                workingArea: new(
+                    x: monitorInfo.rcWork.Left,
+                    y: monitorInfo.rcWork.Top,
+                    width: monitorInfo.rcWork.Right - monitorInfo.rcWork.Left,
+                    height: monitorInfo.rcWork.Bottom - monitorInfo.rcWork.Top)))
+            .ToList();
+
+        return screenInfo;
     }
 }

@@ -4,9 +4,8 @@
 
 #nullable enable
 
+using System.Drawing;
 using System.Text.Json.Serialization;
-
-using MouseJump.Common.Models.Drawing;
 
 namespace MouseWithoutBorders.Api.Models;
 
@@ -30,16 +29,6 @@ public sealed record RectangleInfo
         this.Width = width;
         this.Height = height;
         this.IsEmpty = true;
-    }
-
-    public RectangleInfo(PointInfo location, SizeInfo size)
-        : this(location.X, location.Y, size.Width, size.Height)
-    {
-    }
-
-    public RectangleInfo(SizeInfo size)
-        : this(0, 0, size.Width, size.Height)
-    {
     }
 
     [JsonPropertyName("x")]
@@ -76,11 +65,34 @@ public sealed record RectangleInfo
         get;
     }
 
+    [JsonIgnore]
+    public decimal Left =>
+        this.X;
+
+    [JsonIgnore]
+    public decimal Top =>
+        this.Y;
+
+    [JsonIgnore]
+    public decimal Right =>
+        this.X + this.Width;
+
+    [JsonIgnore]
+    public decimal Bottom =>
+        this.Y + this.Height;
+
+    public Rectangle ToRectangle() =>
+        new(
+            (int)this.X,
+            (int)this.Y,
+            (int)this.Width,
+            (int)this.Height);
+
     public override string ToString()
     {
         return "{" +
-            $"{nameof(this.X)}={this.X}," +
-            $"{nameof(this.Y)}={this.Y}," +
+            $"{nameof(this.Left)}={this.Left}," +
+            $"{nameof(this.Top)}={this.Top}," +
             $"{nameof(this.Width)}={this.Width}," +
             $"{nameof(this.Height)}={this.Height}" +
             "}";
