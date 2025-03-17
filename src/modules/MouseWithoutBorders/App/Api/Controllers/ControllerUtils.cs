@@ -6,32 +6,166 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Net;
 using System.Runtime.InteropServices;
-
+using System.Security.Cryptography;
+using System.Text;
+using Microsoft.AspNetCore.Mvc;
 using MouseWithoutBorders.Api.Models;
+using MouseWithoutBorders.Core;
 
 namespace MouseWithoutBorders.Api.Controllers;
 
 internal static class ControllerUtils
 {
-    public static void ValidateMachineId(string machineId)
+    /// <summary>
+    /// TODO: implement a better encryption mechanism.
+    /// </summary>
+    public static string EncryptString(string plainText, string privateKey)
+    {
+        // generate a new IV for each encryption
+        using var aes = Aes.Create();
+
+        // generate the private key bytes
+        aes.Key = SHA256.HashData(Encoding.UTF8.GetBytes(privateKey));
+
+        // generate a random public key and write it to the result
+        // so we can read it to decrypt the rest of the stream
+        using var memoryStream = new MemoryStream();
+        aes.GenerateIV();
+        memoryStream.Write(aes.IV, 0, aes.IV.Length);
+
+        // write the encrypted security key
+        var encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
+        using var cryptoStream = new CryptoStream(memoryStream, encryptor, CryptoStreamMode.Write);
+        using var writer = new StreamWriter(cryptoStream);
+        writer.Write(plainText);
+        writer.Flush();
+        cryptoStream.FlushFinalBlock();
+
+        var encrypted = memoryStream.ToArray();
+        var base64 = Convert.ToBase64String(encrypted);
+        return base64;
+    }
+
+    /// <summary>
+    /// TODO: implement a better encryption mechanism.
+    /// </summary>
+    public static string DecryptString(string encryptedValue, string privateKey)
+    {
+        using var aes = Aes.Create();
+
+        var buffer = Convert.FromBase64String(encryptedValue);
+        using var memoryStream = new MemoryStream(buffer);
+
+        // extract IV from the ciphertext
+        var iv = new byte[aes.IV.Length];
+        memoryStream.Read(iv, 0, iv.Length);
+        aes.IV = iv;
+
+        aes.Key = SHA256.HashData(Encoding.UTF8.GetBytes(privateKey));
+
+        var decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
+        using var cryptoStream = new CryptoStream(memoryStream, decryptor, CryptoStreamMode.Read);
+        using var reader = new StreamReader(cryptoStream);
+        var plainText = reader.ReadToEnd();
+
+        return plainText;
+    }
+
+    /// <summary>
+    /// TODO: implement a better encryption mechanism.
+    /// </summary>
+    public static bool TryValidateSecurityKey(string encryptedKey, [NotNullWhen(false)] out ActionResult? response)
+    {
+        // try to decrypt the security key to get the encrypted timestamp
+        var plainText = default(string);
+        try
+        {
+            plainText = ControllerUtils.DecryptString(encryptedKey, Common.MyKey);
+        }
+        catch
+        {
+            response = new ObjectResult(
+                new { Message = $"Invalid security key." })
+            {
+                StatusCode = (int)HttpStatusCode.Forbidden,
+            };
+            return false;
+        }
+
+        // read the timestamp from the key
+#if DEBUG
+        var timeout = TimeSpan.FromMinutes(60);
+#else
+        var timeout = TimeSpan.FromSeconds(10);
+#endif
+        var timestamp = new DateTime(long.Parse(plainText, CultureInfo.InvariantCulture));
+        if ((timestamp + timeout) < DateTime.UtcNow)
+        {
+            response = new ObjectResult(
+                new { Message = $"The security key has expired." })
+            {
+                StatusCode = (int)HttpStatusCode.Forbidden,
+            };
+            return false;
+        }
+
+        response = null;
+        return true;
+    }
+
+    public static bool TryValidateMachineId(string machineId, [NotNullWhen(false)] out ActionResult? response)
     {
         const string allowedChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_";
         ArgumentNullException.ThrowIfNullOrWhiteSpace(machineId);
         machineId = machineId.Trim();
         if (string.IsNullOrEmpty(machineId))
         {
-            throw new ArgumentException("Machine ID cannot be empty.", nameof(machineId));
+            response = new BadRequestObjectResult(
+                new { Message = "Machine ID cannot be empty." });
+            return false;
         }
 
         foreach (char c in machineId)
         {
             if (!allowedChars.Contains(c))
             {
-                throw new ArgumentException($"Machine ID contains an invalid character. Allowed characters are: {allowedChars}", nameof(machineId));
+                response = new BadRequestObjectResult(
+                    new { Message = $"Machine ID contains invalid characters." });
+                return false;
             }
         }
+
+        response = null;
+        return true;
+    }
+
+    public static bool TryValidateMatrixId(string machineId, [NotNullWhen(false)] out ActionResult? response)
+    {
+        var stringComparer = StringComparison.OrdinalIgnoreCase;
+        var matrixId = MachineStuff.MachineMatrix
+            .Where(matrixId => !string.IsNullOrEmpty(matrixId))
+            .FirstOrDefault(matrixId => string.Equals(matrixId, machineId, stringComparer));
+        if (matrixId is null)
+        {
+            response = new NotFoundObjectResult(
+                new { Message = "The specified machine was not found." });
+            return false;
+        }
+
+        response = null;
+        return true;
+    }
+
+    public static bool IsLocalMachineId(string machineId)
+    {
+        var stringComparer = StringComparison.OrdinalIgnoreCase;
+        return string.Equals(machineId, Environment.MachineName, stringComparer);
     }
 
     public static List<ScreenInfo> GetLocalScreens()

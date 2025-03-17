@@ -5,13 +5,11 @@
 #nullable enable
 
 using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
-using System.Linq;
+using System.Net;
 using System.Net.Http;
-using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -19,19 +17,24 @@ using Microsoft.AspNetCore.Mvc;
 using MouseWithoutBorders.Api.Imaging;
 using MouseWithoutBorders.Api.Models;
 using MouseWithoutBorders.Api.Server;
-using MouseWithoutBorders.Core;
 
 namespace MouseWithoutBorders.Api.Controllers;
 
 [ApiController]
-public class MachineController : ControllerBase
+public class MachineControllerBase : ControllerBase
 {
-    public MachineController(HttpClient httpClient)
+    public MachineControllerBase(HttpClient httpClient, bool allowRemote)
     {
         this.HttpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+        this.AllowRemote = allowRemote;
     }
 
     private HttpClient HttpClient
+    {
+        get;
+    }
+
+    private bool AllowRemote
     {
         get;
     }
@@ -41,42 +44,52 @@ public class MachineController : ControllerBase
     /// </summary>
     /// <returns>
     /// Returns the screen setup on the specified machine.
+    /// If the machine is local it returns the local screen setup, otherwise
+    /// it makes a request to the remote api server to get the screen setup.
     /// </returns>
-    [HttpGet]
-    [Route("Machines/{machineId}/Screens")]
-    public async Task<IActionResult> ScreensAsync(string machineId)
+    protected async Task<IActionResult> ScreensBaseAsync(string securityKey, string? machineId)
     {
-        ControllerUtils.ValidateMachineId(machineId);
-
-        // check if the machine id is in the machine matrix
-        var stringComparer = StringComparison.OrdinalIgnoreCase;
-        var matrixId = MachineStuff.MachineMatrix
-            .Where(matrixId => !string.IsNullOrEmpty(matrixId))
-            .FirstOrDefault(matrixId => string.Equals(matrixId, machineId, stringComparer));
-        if (matrixId is null)
+        // verify the security key
+        if (!ControllerUtils.TryValidateSecurityKey(securityKey, out var securityKeyResponse))
         {
-            return NotFound();
+            return securityKeyResponse;
         }
 
         // check if it's the local machine and use the winapi to get screen topology
-        if (string.Equals(matrixId, Environment.MachineName, stringComparer))
+        if (machineId is null)
         {
             var screenInfoList = ControllerUtils.GetLocalScreens();
             return Ok(screenInfoList);
         }
 
-        // must be a remote machine - send a request to the remote api server
+        // it's a remote machine - check we're allowed to make a call to a remote api server
+        if (!this.AllowRemote)
+        {
+            return StatusCode(
+                (int)HttpStatusCode.Forbidden, "Remote access is disabled.");
+        }
+
+        // check the machine id is in the machine matrix
+        if (!ControllerUtils.TryValidateMatrixId(machineId, out var matrixIdResponse))
+        {
+            return matrixIdResponse;
+        }
+
+        // send a request to the remote api server
         try
         {
-            var requestUrl = $"http://{machineId}:{RemoteApiServer.RemoteApiServerPort}/Machines/{machineId}/Screens";
+            var requestUrl = $"http://{machineId}:{RemoteApiServer.RemoteApiServerPort}/v1/screens" +
+                $"?scurityKey={securityKey}";
             var responseJson = await this.HttpClient.GetStringAsync(requestUrl);
             var responseScreens = JsonSerializer.Deserialize<ScreenInfo[]>(responseJson)
                 ?? throw new InvalidOperationException();
             return Ok(responseScreens);
         }
-        catch
+        catch (HttpRequestException ex)
         {
-            return Ok(Array.Empty<ScreenInfo>());
+            var errorCode = ex.StatusCode.HasValue ? ex.StatusCode.Value.ToString() : "Unknown";
+            var errorMessage = $"Error Code: {errorCode}, Message: {ex.Message}";
+            return StatusCode((int)HttpStatusCode.BadRequest, errorMessage);
         }
     }
 
@@ -87,32 +100,27 @@ public class MachineController : ControllerBase
     /// </summary>
     /// <returns>
     /// Returns a screenshot of the specified screen stretched to the requested width and height.
+    /// If the machine is local it returns a screenshot from the local screen, otherwise
+    /// it makes a request to the remote api server to get the screenshot.
     /// </returns>
-    [HttpGet]
-    [Route("Machines/{machineId}/Screens/{screenId}/Screenshot")]
-    public async Task<IActionResult> ScreenshotAsync(string machineId, int screenId, [FromQuery] int width, [FromQuery] int height)
+    protected async Task<IActionResult> ScreenshotBaseAsync(string securityKey, string? machineId, int screenId, int width, int height)
     {
-        ControllerUtils.ValidateMachineId(machineId);
-
-        // check if the machine id is in the machine matrix
-        var stringComparer = StringComparison.OrdinalIgnoreCase;
-        var matrixId = MachineStuff.MachineMatrix
-            .Where(matrixId => !string.IsNullOrEmpty(matrixId))
-            .FirstOrDefault(matrixId => string.Equals(matrixId, machineId, stringComparer));
-        if (matrixId is null)
+        // verify the security key
+        if (!ControllerUtils.TryValidateSecurityKey(securityKey, out var securityKeyResponse))
         {
-            return NotFound();
+            return securityKeyResponse;
         }
 
-        // check if it's the local machine and use the winapi to get a screenshot
-        if (string.Equals(matrixId, Environment.MachineName, stringComparer))
+        // if it's the local machine use the winapi to get a screenshot
+        if (machineId is null)
         {
             var screenInfoList = ControllerUtils.GetLocalScreens();
 
             // make sure the screen id exists
             if (screenId < 0 || screenId >= screenInfoList.Count)
             {
-                return NotFound();
+                return NotFound(
+                    new { Message = "The specified screen does not exist." });
             }
 
             // limit the size of valid screenshots
@@ -120,7 +128,8 @@ public class MachineController : ControllerBase
             if ((width < 0) || (width > sourceDisplayArea.Width)
                 || (height < 0) || (height > sourceDisplayArea.Height))
             {
-                return BadRequest();
+                return NotFound(
+                    new { Message = "Invalid screenshot image dimensions." });
             }
 
             // generate the screenshot image
@@ -139,10 +148,24 @@ public class MachineController : ControllerBase
             return File(imageBytes, "image/png");
         }
 
-        // must be a remote machine - send a request to the remote api server
+        // it's a remote machine - check we're allowed to make a call to a remote api server
+        if (!this.AllowRemote)
+        {
+            return StatusCode(
+                (int)HttpStatusCode.Forbidden, "Remote access is disabled.");
+        }
+
+        // check the machine id is in the machine matrix
+        if (!ControllerUtils.TryValidateMatrixId(machineId, out var matrixIdResponse))
+        {
+            return matrixIdResponse;
+        }
+
+        // send a request to the remote api server
         try
         {
-            var requestUrl = $"http://{machineId}:{RemoteApiServer.RemoteApiServerPort}/Machines/{machineId}/Screens/{screenId}/Screenshot" +
+            var requestUrl = $"http://{machineId}:{RemoteApiServer.RemoteApiServerPort}/v1/screens/{screenId}/screenshot" +
+                $"?securityKey={securityKey}" +
                 $"&width={width}" +
                 $"&height={height}";
             var responseJson = await this.HttpClient.GetStringAsync(requestUrl);
@@ -150,9 +173,16 @@ public class MachineController : ControllerBase
                 ?? throw new InvalidOperationException();
             return Ok(responseScreens);
         }
-        catch
+        catch (HttpRequestException ex)
         {
-            return Ok(Array.Empty<ScreenInfo>());
+            var errorCode = ex.StatusCode.HasValue ? ex.StatusCode.Value.ToString() : "Unknown";
+            var errorMessage = $"Error Code: {errorCode}, Message: {ex.Message}";
+            return StatusCode((int)HttpStatusCode.BadRequest, errorMessage);
+        }
+        catch (TimeoutException)
+        {
+            var errorMessage = $"Operation timed out";
+            return StatusCode((int)HttpStatusCode.BadRequest, errorMessage);
         }
     }
 }

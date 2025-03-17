@@ -5,7 +5,6 @@
 #nullable enable
 
 using System;
-using System.Drawing;
 using System.Text.Json.Serialization;
 
 namespace MouseWithoutBorders.Api.Models;

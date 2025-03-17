@@ -27,12 +27,13 @@ public class MachineStuffController : ControllerBase
     }
 
     /// <summary>
-    /// Invoke-RestMethod "http://localhost:15102/MachineStuff/MachineMatrix"
+    /// Invoke-RestMethod "http://localhost:15102/v1/local/MachineStuff/MachineMatrix"
     /// </summary>
     /// <returns>
     /// Returns the list of connected machines in the current MachineMatrix.
     /// </returns>
     [HttpGet]
+    [Route("v1/local/matrix")]
     public IActionResult MachineMatrix()
     {
         var machineMatrix = MachineStuff.MachineMatrix

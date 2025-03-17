@@ -5,9 +5,6 @@
 #nullable enable
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -17,7 +14,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.VisualStudio.Threading;
 using MouseWithoutBorders.Api.Controllers;
-using Windows.Media.Protection.PlayReady;
 
 namespace MouseWithoutBorders.Api.Server;
 
@@ -50,7 +46,7 @@ internal sealed class LocalApiServer : ApiServerBase
                 apm.FeatureProviders.Add(
                     new CustomControllerFeatureProvider(
                         [
-                            typeof(MachineController),
+                            typeof(MachineControllerLocal),
                             typeof(MachineStuffController),
                             typeof(StatusController),
                         ]));

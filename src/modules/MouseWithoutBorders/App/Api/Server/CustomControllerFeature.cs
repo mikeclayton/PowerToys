@@ -12,6 +12,10 @@ using Microsoft.AspNetCore.Mvc.Controllers;
 
 namespace MouseWithoutBorders.Api.Server;
 
+/// <summary>
+/// Provides a custom implementation of <see cref="ControllerFeatureProvider"/> that determines
+/// whether a type is a controller based on a predefined set of controller types.
+/// </summary>
 public sealed class CustomControllerFeatureProvider : ControllerFeatureProvider
 {
     public CustomControllerFeatureProvider(IEnumerable<Type> controllerTypes)
