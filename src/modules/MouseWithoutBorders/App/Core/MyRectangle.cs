@@ -10,12 +10,16 @@
 //     2009-... modified by Truong Do (TruongDo).
 //     2023- Included in PowerToys.
 // </history>
+using System.Threading;
+
 namespace MouseWithoutBorders.Core;
 
 internal sealed class MyRectangle
 {
+#pragma warning disable SA1401
     internal int Left;
     internal int Top;
     internal int Right;
     internal int Bottom;
+#pragma warning restore SA1401
 }

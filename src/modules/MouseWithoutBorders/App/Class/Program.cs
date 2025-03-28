@@ -54,7 +54,9 @@ namespace MouseWithoutBorders.Class
 
         private static readonly string ServiceModeArg = "UseService";
 
+#pragma warning disable SA1401
         public static bool ShowServiceModeErrorTooltip;
+#pragma warning restore SA1401
 
         [STAThread]
         private static void Main()

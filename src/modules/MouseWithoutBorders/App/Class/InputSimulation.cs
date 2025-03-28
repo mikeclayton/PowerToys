@@ -29,7 +29,9 @@ namespace MouseWithoutBorders.Class
 {
     internal class InputSimulation
     {
+#pragma warning disable SA1401
         public static InputInjector Injector;
+#pragma warning restore SA1401
 
         private InputSimulation()
         {

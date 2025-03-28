@@ -884,6 +884,7 @@ namespace MouseWithoutBorders.Class
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
         internal class MEMORYSTATUSEX
         {
+#pragma warning disable SA1401
             public uint dwLength;
             public uint dwMemoryLoad;
             public ulong ullTotalPhys;
@@ -893,6 +894,7 @@ namespace MouseWithoutBorders.Class
             public ulong ullTotalVirtual;
             public ulong ullAvailVirtual;
             public ulong ullAvailExtendedVirtual;
+#pragma warning restore SA1401
 
             public MEMORYSTATUSEX()
             {

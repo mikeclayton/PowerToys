@@ -26,11 +26,15 @@ internal static class Event
     private static readonly DATA KeybdPackage = new();
     private static readonly DATA MousePackage = new();
 #pragma warning disable SA1307 // Accessible fields should begin with upper-case names
+#pragma warning disable SA1401
     internal static ulong inputEventCount;
     internal static ulong invalidPackageCount;
-#pragma warning restore SA1307
+#pragma warning disable SA1310
     internal static int MOVE_MOUSE_RELATIVE = 100000;
     internal static int XY_BY_PIXEL = 300000;
+#pragma warning restore SA1310
+#pragma warning restore SA1401
+#pragma warning restore SA1307
 
     static Event()
     {
@@ -56,8 +60,10 @@ internal static class Event
 
     private static Point actualLastPos;
 #pragma warning disable SA1307 // Accessible fields should begin with upper-case names
+#pragma warning disable SA1401
     internal static int myLastX;
     internal static int myLastY;
+#pragma warning restore SA1401
 #pragma warning restore SA1307
 
     [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity", Justification = "Dotnet port with style preservation")]

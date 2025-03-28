@@ -33,7 +33,9 @@ internal static class Logger
     internal static readonly string[] AllLogs = new string[MAX_LOG];
     private static readonly Lock AllLogsLock = new();
     internal static readonly ConcurrentDictionary<string, int> LogCounter = new();
+#pragma warning disable SA1310
     private const int MAX_LOG = 10000;
+#pragma warning restore SA1310
     private static int allLogsIndex;
 
     private const int MaxLogExceptionPerHour = 1000;

@@ -27,25 +27,33 @@ internal static class MachineStuff
 {
     private static readonly Lock McMatrixLock = new();
 
+#pragma warning disable SA1310
     internal const byte MAX_MACHINE = 4;
     private const byte MAX_SOCKET = MAX_MACHINE * 2;
     internal const long HEARTBEAT_TIMEOUT = 1500000; // 30 Mins
     private const int SKIP_PIXELS = 1;
     private const int JUMP_PIXELS = 2;
+#pragma warning restore SA1310
 
 #pragma warning disable SA1307 // Accessible fields should begin with upper-case letter
+#pragma warning disable SA1401
     internal static ID desMachineID;
+#pragma warning restore SA1401
 #pragma warning restore SA1307
 #pragma warning disable SA1306 // Field should begin with a lower-case letter
+#pragma warning disable SA1401
     internal static string DesMachineName = string.Empty;
+#pragma warning restore SA1401
 #pragma warning restore SA1306
 #pragma warning disable SA1307 // Accessible fields should begin with upper-case letter
+#pragma warning disable SA1401
     internal static ID newDesMachineID;
     internal static ID newDesMachineIdEx;
     internal static ID dropMachineID;
     internal static long lastJump = Common.GetTick();
     internal static MyRectangle desktopBounds = new();
     internal static MyRectangle primaryScreenBounds = new();
+#pragma warning restore SA1401
 #pragma warning restore SA1307
     private static MachinePool _machinePool;
 
@@ -61,7 +69,9 @@ internal static class MachineStuff
     internal static MyRectangle PrimaryScreenBounds => MachineStuff.primaryScreenBounds;
 
 #pragma warning disable SA1306 // Field should begin with a lower-case letter
+#pragma warning disable SA1401
     internal static MouseLocation SwitchLocation = new();
+#pragma warning restore SA1401
 #pragma warning restore SA1306
 
     internal static ID NewDesMachineID
@@ -1062,7 +1072,9 @@ internal static class MachineStuff
     }
 
 #pragma warning disable SA1307 // Accessible fields should begin with upper-case letter
+#pragma warning disable SA1401
     internal static EventWaitHandle oneInstanceCheck;
+#pragma warning restore SA1401
 #pragma warning restore SA1307
 
     internal static void AssertOneInstancePerDesktopSession()

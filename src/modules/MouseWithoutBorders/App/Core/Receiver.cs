@@ -27,12 +27,16 @@ namespace MouseWithoutBorders.Core;
 
 internal static class Receiver
 {
+#pragma warning disable SA1310
     private static readonly uint QUEUE_SIZE = 50;
+#pragma warning restore SA1310
     private static readonly int[] RecentProcessedPackageIDs = new int[QUEUE_SIZE];
     private static int recentProcessedPackageIndex;
 #pragma warning disable SA1307 // Accessible fields should begin with upper-case letter
+#pragma warning disable SA1401
     internal static long processedPackageCount;
     internal static long skippedPackageCount;
+#pragma warning restore SA1401
 #pragma warning restore SA1307
 
     private static long JustGotAKey { get; set; }

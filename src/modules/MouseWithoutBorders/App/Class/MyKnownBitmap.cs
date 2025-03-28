@@ -17,6 +17,7 @@ using System.Drawing.Imaging;
 using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
+using Windows.UI.Input.Preview.Injection;
 
 [module: SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes", Scope = "member", Target = "MouseWithoutBorders.MyKnownBitmap.#FromFile(System.string)", Justification = "Dotnet port with style preservation")]
 
@@ -25,7 +26,9 @@ namespace MouseWithoutBorders.Class
 #if CUSTOMIZE_LOGON_SCREEN
     internal class MyKnownBitmap
     {
+#pragma warning disable SA1310
         private const int BITMAP_FILE_HEADER_SIZE = 14;
+#pragma warning restore SA1310
 
         [StructLayout(LayoutKind.Sequential, Pack = 1, Size = BITMAP_FILE_HEADER_SIZE)]
         private struct BITMAPFILEHEADER
@@ -37,7 +40,9 @@ namespace MouseWithoutBorders.Class
             public uint BfOffBits;
         }
 
+#pragma warning disable SA1310
         private const int BITMAP_INFO_HEADER_SIZE = 40;
+#pragma warning restore SA1310
 
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         private struct BITMAPINFOHEADER
@@ -55,7 +60,9 @@ namespace MouseWithoutBorders.Class
             public uint BiClrImportant;
         }
 
+#pragma warning disable SA1310
         private const long MAX_FILE_SIZE = 10 * 1024 * 1024;
+#pragma warning restore SA1310
 
         internal static object FromFile(string bitmapFile)
         {

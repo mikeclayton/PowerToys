@@ -23,10 +23,12 @@ using MouseWithoutBorders.Core;
 namespace MouseWithoutBorders.Class
 #pragma warning restore CA1716
 {
+#pragma warning disable SA1649
     internal struct IconInfo
+#pragma warning restore SA1649
     {
         // Suppress warning to match COM names
-        #pragma warning disable SA1307
+#pragma warning disable SA1307
         internal bool fIcon;
         internal int xHotspot;
         internal int yHotspot;

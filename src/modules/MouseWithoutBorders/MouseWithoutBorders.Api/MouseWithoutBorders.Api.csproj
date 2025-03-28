@@ -1,0 +1,36 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Look at Directory.Build.props in root for common stuff as well -->
+  <Import Project="..\..\..\Common.Dotnet.CsWinRT.props" />
+  <Import Project="..\..\..\Common.SelfContained.props" />
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <AssemblyName>PowerToys.MouseWithoutBorders.Api</AssemblyName>
+    <DisableWinExeOutputInference>true</DisableWinExeOutputInference>
+    <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
+    <OutputPath>..\..\..\..\$(Platform)\$(Configuration)</OutputPath>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <NoWin32Manifest>true</NoWin32Manifest>
+
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <DefineConstants>TRACE;DEBUG;SHOW_ON_WINLOGON CODE_ANALYSIS CUSTOMIZE_LOGON_SCREEN</DefineConstants>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DefineConstants>TRACE;SHOW_ON_WINLOGON CODE_ANALYSIS CUSTOMIZE_LOGON_SCREEN</DefineConstants>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
+    <NoWarn />
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging" />
+    <PackageReference Include="Microsoft.VisualStudio.Threading" />
+  </ItemGroup>
+
+</Project>

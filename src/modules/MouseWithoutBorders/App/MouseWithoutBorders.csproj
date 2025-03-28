@@ -219,6 +219,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\common\GPOWrapper\GPOWrapper.vcxproj" />
     <ProjectReference Include="..\..\..\settings-ui\Settings.UI.Library\Settings.UI.Library.csproj" />
+    <ProjectReference Include="..\MouseWithoutBorders.Api\MouseWithoutBorders.Api.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="Control\Machine2.Designer.cs" />

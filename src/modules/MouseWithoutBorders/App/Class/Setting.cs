@@ -42,9 +42,15 @@ using SettingsHelper = Microsoft.PowerToys.Settings.UI.Library.Utilities.Helper;
 
 namespace MouseWithoutBorders.Class
 {
+#pragma warning disable SA1402
+#pragma warning disable SA1649
     internal class Settings
+#pragma warning restore SA1649
+#pragma warning restore SA1402
     {
+#pragma warning disable SA1401
         internal bool Changed;
+#pragma warning restore SA1401
 
         private readonly SettingsUtils _settingsUtils;
         private readonly Lock _loadingSettingsLock = new Lock();
@@ -1136,6 +1142,8 @@ namespace MouseWithoutBorders.Class
 
     public static class Setting
     {
+#pragma warning disable SA1401
         internal static Settings Values = new Settings();
+#pragma warning restore SA1401
     }
 }

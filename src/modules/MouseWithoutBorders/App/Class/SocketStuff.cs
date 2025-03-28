@@ -64,7 +64,11 @@ namespace MouseWithoutBorders.Class
         Connected = 9,
     }
 
+#pragma warning disable SA1402
+#pragma warning disable SA1649
     internal class TcpSk : IDisposable
+#pragma warning restore SA1649
+#pragma warning restore SA1402
     {
         public TcpSk(bool isClient, Socket s, SocketStatus status, string machineName, IPAddress address = null)
         {
@@ -147,14 +151,20 @@ namespace MouseWithoutBorders.Class
 
     internal class SocketStuff
     {
+#pragma warning disable SA1310
         private readonly int bASE_PORT;
+#pragma warning restore SA1310
         private TcpServer skClipboardServer;
         private TcpServer skMessageServer;
+#pragma warning disable SA1401
         internal object TcpSocketsLock = new();
         internal static bool InvalidKeyFound;
         internal static bool InvalidKeyFoundOnClientSocket;
+#pragma warning restore SA1401
 
+#pragma warning disable SA1310
         internal const int CONNECT_TIMEOUT = 60000;
+#pragma warning restore SA1310
         private static readonly ConcurrentDictionary<string, int> FailedAttempt = new();
 
         internal List<TcpSk> TcpSockets

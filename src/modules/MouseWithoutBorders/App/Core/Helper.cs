@@ -29,13 +29,19 @@ namespace MouseWithoutBorders.Core;
 
 internal static class Helper
 {
+#pragma warning disable SA1310
     internal const string HELPER_FORM_TEXT = "Mouse without Borders Helper";
+#pragma warning restore SA1310
     internal const string HelperProcessName = "PowerToys.MouseWithoutBordersHelper";
 #pragma warning disable SA1307 // Accessible fields should begin with upper-case letter
+#pragma warning disable SA1401
     internal static bool signalHelperToExit;
     internal static bool signalWatchDogToExit;
+#pragma warning restore SA1401
 #pragma warning restore SA1307
+#pragma warning disable SA1401
     internal static long WndProcCounter;
+#pragma warning restore SA1401
 
     private static void WatchDogThread()
     {
