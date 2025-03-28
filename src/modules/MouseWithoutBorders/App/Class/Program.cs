@@ -31,6 +31,8 @@ using System.Xml.Linq;
 using ManagedCommon;
 using Microsoft.PowerToys.Settings.UI.Library.Utilities;
 using Microsoft.PowerToys.Telemetry;
+using Microsoft.VisualStudio.Threading;
+using MouseWithoutBorders.Api;
 using MouseWithoutBorders.Core;
 using Newtonsoft.Json;
 using StreamJsonRpc;
@@ -240,7 +242,21 @@ namespace MouseWithoutBorders.Class
 
                 var formScreen = new FrmScreen();
 
+                // start the api server. we can't use "async Task Main", due to compatibility
+                // with the "[STAThread]" attribute so we have to use JoinableTaskFactory instead
+                var cancellationTokenSource = new CancellationTokenSource();
+                var joinableTaskContext = new JoinableTaskContext();
+                var joinableTaskFactory = new JoinableTaskFactory(joinableTaskContext);
+                var mwbApiServerTask = joinableTaskFactory.RunAsync(async () =>
+                {
+                    await MwbApiServer.RunAsync(cancellationTokenSource.Token).ConfigureAwait(false);
+                });
+
                 Application.Run(formScreen);
+
+                // stop the api server
+                cancellationTokenSource.Cancel();
+                joinableTaskFactory.Run(async () => await mwbApiServerTask.JoinAsync());
 
                 etwTrace?.Dispose();
             }
