@@ -3,9 +3,9 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Net.Sockets;
-
+using System.Threading;
+using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
-using MouseWithoutBorders.Api.Transport.Events;
 
 using Message = MouseWithoutBorders.Api.Models.Messages.Message;
 
@@ -14,12 +14,13 @@ namespace MouseWithoutBorders.Api.Transport;
 
 public sealed class ServerSession : IDisposable
 {
-    public event EventHandler<MessageReceivedEventArgs> MessageReceived = (sender, e) => { };
-
-    public ServerSession(ILogger logger, TcpClient tcpClient)
+    public ServerSession(ILogger logger, ServerEndpoint server, TcpClient tcpClient)
     {
         this.Logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        this.Server = server ?? throw new ArgumentNullException(nameof(server));
         this.TcpClient = tcpClient ?? throw new ArgumentNullException(nameof(tcpClient));
+        this.SendBuffer = Channel.CreateBounded<Message>(250);
+        this.StopTokenSource = new CancellationTokenSource();
     }
 
     public ILogger Logger
@@ -27,7 +28,25 @@ public sealed class ServerSession : IDisposable
         get;
     }
 
+    private ServerEndpoint Server
+    {
+        get;
+    }
+
     public TcpClient TcpClient
+    {
+        get;
+    }
+
+    /// <summary>
+    /// Gets the channel used to buffer messages internally while they wait to be sent to the server.
+    /// </summary>
+    private Channel<Message> SendBuffer
+    {
+        get;
+    }
+
+    private CancellationTokenSource StopTokenSource
     {
         get;
     }
@@ -38,68 +57,46 @@ public sealed class ServerSession : IDisposable
         set;
     }
 
-    public void OnMessageReceived(MessageReceivedEventArgs e)
+    public async Task ConnectAsync(CancellationToken cancellationToken)
     {
-        this.MessageReceived?.Invoke(this, e);
-    }
+        // await a dummy task to the compiler doesn't complain about "async"
+        await Task.CompletedTask;
 
-    public void SendMessage(Message message)
-    {
-        this.SendMessage(message.CorrelationId, message.MessageType, message.MessageData);
-    }
+        // create a combined cancellation token so the caller can stop the client,
+        // or we can stop it without having to cancel the caller's token
+        var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+            this.StopTokenSource.Token, cancellationToken);
 
-    public void SendMessage<T>(int correlationId, int messageType, T messageData)
-        where T : struct
-    {
-        var payload = Message.Serialize(messageData);
-        this.SendMessage(correlationId, messageType, payload);
-    }
+        // listen for messages coming up from the client
+        // (start this first so we don't miss any incoming messages)
+        _ = Task.Run(() => this.ReceiveMessagesAsync(linkedCts.Token), cancellationToken);
 
-    public void SendMessage(int correlationId, int messageType, byte[]? messageData)
-    {
-        this.Logger.LogInformation($"session: {nameof(this.SendMessageAsync)}");
-
-        var tcpClient = this.TcpClient ?? throw new InvalidOperationException();
-        if (!tcpClient.Connected)
-        {
-            // client disconnected
-            throw new InvalidOperationException("session: client disconnected");
-        }
-
-        var outboundStream = tcpClient.GetStream() ?? throw new InvalidOperationException();
-        EndpointHelper.WriteMessage(outboundStream, correlationId, messageType, messageData);
+        // pump messages from the session's "send" buffer down to the client
+        this.Logger.LogInformation("session: starting network writer");
+        _ = Task.Run(() => EndpointHelper.StartNetworkSenderAsync(this.SendBuffer, this.TcpClient, linkedCts.Token), cancellationToken);
+        this.Logger.LogInformation("session: network writer started...");
     }
 
     public async Task SendMessageAsync(Message message, CancellationToken cancellationToken = default)
     {
-        await this.SendMessageAsync(message.CorrelationId, message.MessageType, message.MessageData, cancellationToken);
+        await this.SendBuffer.Writer.WriteAsync(message, cancellationToken);
     }
 
-    public async Task SendMessageAsync(int correlationId, int messageType, CancellationToken cancellationToken = default)
+    internal async Task ReceiveMessagesAsync(CancellationToken cancellationToken)
     {
-        await this.SendMessageAsync(correlationId, messageType, null, cancellationToken);
-    }
-
-    public async Task SendMessageAsync<T>(int correlationId, int messageType, T messageData, CancellationToken cancellationToken = default)
-        where T : struct
-    {
-        var payload = Message.Serialize(messageData);
-        await this.SendMessageAsync(correlationId, messageType, payload, cancellationToken);
-    }
-
-    public async Task SendMessageAsync(int correlationId, int messageType, byte[]? messageData, CancellationToken cancellationToken = default)
-    {
-        this.Logger.LogInformation($"session: {nameof(this.SendMessageAsync)}");
-
-        var tcpClient = this.TcpClient ?? throw new InvalidOperationException();
-        if (!tcpClient.Connected)
+        var inboundStream = this.TcpClient.GetStream();
+        while (!cancellationToken.IsCancellationRequested)
         {
-            // client disconnected
-            throw new InvalidOperationException("session: client disconnected");
-        }
+            // read the next incoming message
+            var message = await EndpointHelper.ReadMessageAsync(inboundStream, cancellationToken);
+            if (message == null)
+            {
+                return;
+            }
 
-        var outboundStream = tcpClient.GetStream() ?? throw new InvalidOperationException();
-        await EndpointHelper.WriteMessageAsync(outboundStream, correlationId, messageType, messageData, cancellationToken);
+            // process the message
+            await this.Server.ReceiveMessageAsync(this, message, cancellationToken);
+        }
     }
 
     public void Dispose()

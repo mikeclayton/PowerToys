@@ -6,21 +6,22 @@ using System.Net;
 using System.Net.Sockets;
 
 using Microsoft.Extensions.Logging;
-using MouseWithoutBorders.Api.Transport.Events;
+using Message = MouseWithoutBorders.Api.Models.Messages.Message;
 
 #pragma warning disable CA1848 // Use the LoggerMethod delegates
 namespace MouseWithoutBorders.Api.Transport;
 
 public sealed class ServerEndpoint : IDisposable
 {
-    public event EventHandler<ClientConnectedEventArgs> ClientConnected = (sender, e) => { };
+    public delegate Task MessageReceivedCallback(ServerEndpoint server, ServerSession session, Message message, CancellationToken cancellationToken);
 
-    public ServerEndpoint(ILogger logger, string name, IPAddress address, int port)
+    public ServerEndpoint(ILogger logger, string name, IPAddress address, int port, MessageReceivedCallback callback)
     {
         this.Logger = logger ?? throw new ArgumentNullException(nameof(logger));
         this.Name = name ?? throw new ArgumentNullException(nameof(name));
         this.Address = address ?? throw new ArgumentNullException(nameof(address));
         this.Port = port;
+        this.Callback = callback ?? throw new ArgumentNullException(nameof(callback));
     }
 
     ~ServerEndpoint()
@@ -33,6 +34,10 @@ public sealed class ServerEndpoint : IDisposable
         get;
     }
 
+    /// <summary>
+    /// Gets a name for the server endpoint that can be used to identify
+    /// it in log messages and other diagnostic output.
+    /// </summary>
     public string Name
     {
         get;
@@ -48,13 +53,12 @@ public sealed class ServerEndpoint : IDisposable
         get;
     }
 
-    private TcpClient? TcpClient
+    public MessageReceivedCallback Callback
     {
         get;
-        set;
     }
 
-    private Stream? OutboundStream
+    private TcpClient? TcpClient
     {
         get;
         set;
@@ -66,13 +70,9 @@ public sealed class ServerEndpoint : IDisposable
         set;
     }
 
-    public void OnClientConnected(ClientConnectedEventArgs e)
-    {
-        this.ClientConnected?.Invoke(this, e);
-    }
-
     public async Task StartServerAsync(CancellationToken cancellationToken = default)
     {
+        this.Logger.LogInformation("server: starting listener...");
         var listener = new TcpListener(this.Address, this.Port);
         listener.Start();
         this.Logger.LogInformation("server: listener started...");
@@ -80,12 +80,12 @@ public sealed class ServerEndpoint : IDisposable
         while (!cancellationToken.IsCancellationRequested)
         {
             var client = await listener.AcceptTcpClientAsync(cancellationToken);
-            var remoteEndpoint = client.Client.RemoteEndPoint as IPEndPoint
+            var clientEndpoint = client.Client.RemoteEndPoint as IPEndPoint
                 ?? throw new InvalidOperationException();
             this.Logger.LogInformation(
                 "server: client connection accepted from '{RemoteEndpointAddress}:{RemoteEndpointPort}'",
-                remoteEndpoint.Address,
-                remoteEndpoint.Port);
+                clientEndpoint.Address,
+                clientEndpoint.Port);
 
             _ = Task.Run(() => this.HandleClientAsync(client, cancellationToken), cancellationToken);
         }
@@ -94,29 +94,13 @@ public sealed class ServerEndpoint : IDisposable
     private async Task HandleClientAsync(TcpClient tcpClient, CancellationToken cancellationToken = default)
     {
         this.Logger.LogInformation($"server: {nameof(HandleClientAsync)}");
-        var serverSession = new ServerSession(this.Logger, tcpClient);
-        this.OnClientConnected(new ClientConnectedEventArgs(serverSession, cancellationToken));
-        await ServerEndpoint.ReceiveMessagesAsync(serverSession, cancellationToken);
+        var serverSession = new ServerSession(this.Logger, this, tcpClient);
+        await serverSession.ConnectAsync(cancellationToken);
     }
 
-    private static async Task ReceiveMessagesAsync(ServerSession serverSession, CancellationToken cancellationToken)
-     {
-        while (!cancellationToken.IsCancellationRequested)
-        {
-            await ServerEndpoint.ReceiveMessageAsync(serverSession, cancellationToken);
-        }
-    }
-
-    private static async Task ReceiveMessageAsync(ServerSession serverSession, CancellationToken cancellationToken)
+    internal async Task ReceiveMessageAsync(ServerSession session, Message message, CancellationToken cancellationToken)
     {
-        var inboundStream = serverSession.TcpClient.GetStream();
-        var message = await EndpointHelper.ReadMessageAsync(inboundStream, cancellationToken);
-        if (message == null)
-        {
-            return;
-        }
-
-        serverSession.OnMessageReceived(new MessageReceivedEventArgs(message, cancellationToken));
+        await this.Callback.Invoke(this, session, message, cancellationToken);
     }
 
     public void Dispose()
@@ -135,7 +119,6 @@ public sealed class ServerEndpoint : IDisposable
         if (disposing)
         {
             this.TcpClient?.Dispose();
-            this.OutboundStream?.Dispose();
         }
 
         this.Disposed = true;

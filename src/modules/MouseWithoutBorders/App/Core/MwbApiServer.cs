@@ -2,14 +2,17 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
-
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using MouseWithoutBorders.Api.Helpers;
 using MouseWithoutBorders.Api.Models.Messages;
 using MouseWithoutBorders.Api.Transport;
-using MouseWithoutBorders.Api.Transport.Events;
-
+using MouseWithoutBorders.Core;
 using Message = MouseWithoutBorders.Api.Models.Messages.Message;
 
 #pragma warning disable CA1848 // Use the LoggerMethod delegates
@@ -30,21 +33,16 @@ public static class MwbApiServer
             logger: logger,
             name: "server",
             address: IPAddress.Loopback,
-            port: 12345);
+            port: 12345,
+            callback: MwbApiServer.ReceiveMessageAsync);
 
-        server.ClientConnected += (sender, e) =>
-        {
-            var client = e.ServerSession as ServerSession ?? throw new InvalidOperationException();
-            client.MessageReceived += MwbApiServer.MessageReceived;
-        };
-
-        var task = Task.Run(
+        var serverTask = Task.Run(
             () => server.StartServerAsync(cancellationToken).ConfigureAwait(false));
 
         try
         {
             // wait for the task to be cancelled
-            await task;
+            await serverTask;
         }
         catch (OperationCanceledException)
         {
@@ -54,32 +52,29 @@ public static class MwbApiServer
         logger.LogInformation("Goodbye, World!");
     }
 
-    private static void MessageReceived(object? sender, MessageReceivedEventArgs e)
+    private static async Task ReceiveMessageAsync(ServerEndpoint server, ServerSession session, Message message, CancellationToken cancellationToken)
     {
-        var session = sender as ServerSession ?? throw new InvalidOperationException();
-        switch ((MessageType)e.Message.MessageType)
+        // process the message
+        switch ((MessageType)message.MessageType)
         {
             case MessageType.MachineMatrixRequest:
-                /*
                 var machineMatrix = MachineStuff.MachineMatrix
                     .Where(machine => !string.IsNullOrEmpty(machine))
                     .Select(machine => machine.Trim())
                     .ToList();
-                */
-                var machineMatrix = new List<string> { "aaa", "bbb" };
                 var machineMatrixResponse = Message.ToMessage(
-                    correlationId: e.Message.CorrelationId,
+                    correlationId: message.CorrelationId,
                     messageType: (int)MessageType.MachineMatrixResponse,
                     payload: new MachineMatrixResponse(machineMatrix));
-                session.SendMessage(machineMatrixResponse);
+                await session.SendMessageAsync(machineMatrixResponse, cancellationToken);
                 break;
             case MessageType.ScreenInfoRequest:
                 var screenInfo = ScreenHelper.GetAllScreens().ToList();
                 var screenInfoResponse = Message.ToMessage(
-                    correlationId: e.Message.CorrelationId,
+                    correlationId: message.CorrelationId,
                     messageType: (int)MessageType.ScreenInfoResponse,
                     payload: new ScreenInfoResponse(screenInfo));
-                session.SendMessage(screenInfoResponse);
+                await session.SendMessageAsync(screenInfoResponse, cancellationToken);
                 break;
             default:
                 throw new NotImplementedException();

@@ -708,6 +708,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.CmdPal.Ext.System
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MouseWithoutBorders.Api", "src\modules\MouseWithoutBorders\MouseWithoutBorders.Api\MouseWithoutBorders.Api.csproj", "{30BE4E03-E262-4F35-B93C-8392BBB3EF73}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MouseWithoutBorders.Api.UnitTests", "src\modules\MouseWithoutBorders\MouseWithoutBorders.Api.UnitTests\MouseWithoutBorders.Api.UnitTests.csproj", "{A88525EA-2B5C-8716-C243-5CAAA2081FF1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|ARM64 = Debug|ARM64
@@ -2588,6 +2590,14 @@ Global
 		{30BE4E03-E262-4F35-B93C-8392BBB3EF73}.Release|ARM64.Build.0 = Release|ARM64
 		{30BE4E03-E262-4F35-B93C-8392BBB3EF73}.Release|x64.ActiveCfg = Release|x64
 		{30BE4E03-E262-4F35-B93C-8392BBB3EF73}.Release|x64.Build.0 = Release|x64
+		{A88525EA-2B5C-8716-C243-5CAAA2081FF1}.Debug|ARM64.ActiveCfg = Debug|ARM64
+		{A88525EA-2B5C-8716-C243-5CAAA2081FF1}.Debug|ARM64.Build.0 = Debug|ARM64
+		{A88525EA-2B5C-8716-C243-5CAAA2081FF1}.Debug|x64.ActiveCfg = Debug|x64
+		{A88525EA-2B5C-8716-C243-5CAAA2081FF1}.Debug|x64.Build.0 = Debug|x64
+		{A88525EA-2B5C-8716-C243-5CAAA2081FF1}.Release|ARM64.ActiveCfg = Release|ARM64
+		{A88525EA-2B5C-8716-C243-5CAAA2081FF1}.Release|ARM64.Build.0 = Release|ARM64
+		{A88525EA-2B5C-8716-C243-5CAAA2081FF1}.Release|x64.ActiveCfg = Release|x64
+		{A88525EA-2B5C-8716-C243-5CAAA2081FF1}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -2859,6 +2869,7 @@ Global
 		{5702B3CC-8575-48D5-83D8-15BB42269CD3} = {929C1324-22E8-4412-A9A8-80E85F3985A5}
 		{64B88F02-CD88-4ED8-9624-989A800230F9} = {ECB8E0D1-7603-4E5C-AB10-D1E545E6F8E2}
 		{30BE4E03-E262-4F35-B93C-8392BBB3EF73} = {B6C42F16-73EB-477E-8B0D-4E6CF6C20AAC}
+		{A88525EA-2B5C-8716-C243-5CAAA2081FF1} = {B6C42F16-73EB-477E-8B0D-4E6CF6C20AAC}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {C3A2F9D1-7930-4EF4-A6FC-7EE0A99821D0}
