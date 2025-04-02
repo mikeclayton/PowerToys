@@ -17,7 +17,9 @@ public enum MessageType
     ScreenInfoRequest,
     ScreenInfoResponse,
 
-    ScreenshotRequest,
+    ThumbnailRequest,
+    ThumbnailResponse,
+
     ScreenshotStartResponse,
     ScreenshotDataResponse,
     ScreenshotFinishResponse,

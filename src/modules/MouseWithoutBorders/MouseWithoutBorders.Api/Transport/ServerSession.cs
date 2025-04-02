@@ -19,7 +19,7 @@ public sealed class ServerSession : IDisposable
         this.Logger = logger ?? throw new ArgumentNullException(nameof(logger));
         this.Server = server ?? throw new ArgumentNullException(nameof(server));
         this.TcpClient = tcpClient ?? throw new ArgumentNullException(nameof(tcpClient));
-        this.SendBuffer = Channel.CreateBounded<Message>(250);
+        this.Outbox = Channel.CreateBounded<Message>(250);
         this.StopTokenSource = new CancellationTokenSource();
     }
 
@@ -41,7 +41,7 @@ public sealed class ServerSession : IDisposable
     /// <summary>
     /// Gets the channel used to buffer messages internally while they wait to be sent to the server.
     /// </summary>
-    private Channel<Message> SendBuffer
+    private Channel<Message> Outbox
     {
         get;
     }
@@ -73,13 +73,16 @@ public sealed class ServerSession : IDisposable
 
         // pump messages from the session's "send" buffer down to the client
         this.Logger.LogInformation("session: starting network writer");
-        _ = Task.Run(() => EndpointHelper.StartNetworkSenderAsync(this.SendBuffer, this.TcpClient, linkedCts.Token), cancellationToken);
+        _ = Task.Run(() => EndpointHelper.StartNetworkSenderAsync(this.Outbox, this.TcpClient, linkedCts.Token), cancellationToken);
         this.Logger.LogInformation("session: network writer started...");
     }
 
+    /// <summary>
+    /// Puts a message in the session's outbox buffer to be sent to the client.
+    /// </summary>
     public async Task SendMessageAsync(Message message, CancellationToken cancellationToken = default)
     {
-        await this.SendBuffer.Writer.WriteAsync(message, cancellationToken);
+        await this.Outbox.Writer.WriteAsync(message, cancellationToken);
     }
 
     internal async Task ReceiveMessagesAsync(CancellationToken cancellationToken)

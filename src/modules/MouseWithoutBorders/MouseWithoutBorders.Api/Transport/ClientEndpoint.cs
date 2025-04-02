@@ -17,7 +17,7 @@ namespace MouseWithoutBorders.Api.Transport;
 /// to and from a server. The client endpoint is responsible for managing a TCP/IP
 /// network connection to the specified server address and port, and for sending and
 /// receiving messages over that connection. Internally, the client endpoint uses a
-/// local channel to queue messages to be sent to the server and a channel to buffer
+/// local channel to buffer messages to be sent to the server and a channel to buffer
 /// messages received from the server.
 /// </summary>
 public sealed class ClientEndpoint : IDisposable
@@ -28,8 +28,8 @@ public sealed class ClientEndpoint : IDisposable
         this.Name = name ?? throw new ArgumentNullException(nameof(name));
         this.ServerAddress = serverAddress ?? throw new ArgumentNullException(nameof(serverAddress));
         this.ServerPort = serverPort;
-        this.SendBuffer = Channel.CreateBounded<Message>(250);
-        this.ReceiveBuffer = Channel.CreateBounded<Message>(250);
+        this.Inbox = Channel.CreateBounded<Message>(250);
+        this.Outbox = Channel.CreateBounded<Message>(250);
         this.StopTokenSource = new CancellationTokenSource();
     }
 
@@ -69,17 +69,17 @@ public sealed class ClientEndpoint : IDisposable
     }
 
     /// <summary>
-    /// Gets the channel used to buffer messages internally while they wait to be sent to the server.
+    /// Gets the channel used to buffer messages internally when they are received from the server.
     /// </summary>
-    private Channel<Message> SendBuffer
+    private Channel<Message> Inbox
     {
         get;
     }
 
     /// <summary>
-    /// Gets the channel used to buffer messages internally when they are received from the server.
+    /// Gets the channel used to buffer messages internally while they wait to be sent to the server.
     /// </summary>
-    private Channel<Message> ReceiveBuffer
+    private Channel<Message> Outbox
     {
         get;
     }
@@ -111,21 +111,21 @@ public sealed class ClientEndpoint : IDisposable
         // listen for messages coming back from the server
         // (start this first so we don't miss any response messages)
         this.Logger.LogInformation("client: starting network reader");
-        _ = Task.Run(() => EndpointHelper.StartNetworkReceiverAsync(this.TcpClient, this.ReceiveBuffer, linkedCts.Token), cancellationToken);
+        _ = Task.Run(() => EndpointHelper.StartNetworkReceiverAsync(this.TcpClient, this.Inbox, linkedCts.Token), cancellationToken);
         this.Logger.LogInformation("client: network reader started...");
 
         // pump messages from the client's "send" buffer up to the server
         this.Logger.LogInformation("client: starting network writer");
-        _ = Task.Run(() => EndpointHelper.StartNetworkSenderAsync(this.SendBuffer, this.TcpClient, linkedCts.Token), cancellationToken);
+        _ = Task.Run(() => EndpointHelper.StartNetworkSenderAsync(this.Outbox, this.TcpClient, linkedCts.Token), cancellationToken);
         this.Logger.LogInformation("client: network writer started...");
     }
 
     /// <summary>
-    /// Sends a message to the server.
+    /// Puts a message in the client's outbox buffer ready to be sent to the server.
     /// </summary>
     public async Task SendMessageAsync(Message message, CancellationToken cancellationToken = default)
     {
-        await this.SendBuffer.Writer.WriteAsync(message, cancellationToken);
+        await this.Outbox.Writer.WriteAsync(message, cancellationToken);
     }
 
     public async Task<Message> ReadMessageAsync(CancellationToken cancellationToken)
@@ -135,11 +135,12 @@ public sealed class ClientEndpoint : IDisposable
         var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
             this.StopTokenSource.Token, cancellationToken);
 
-        var reader = this.ReceiveBuffer.Reader;
+        var reader = this.Inbox.Reader;
         var message = await reader.ReadAsync(linkedCts.Token);
         return message;
     }
 
+    /*
     public async Task<Message> WaitForMessageAsync(Func<Message, bool> predicate, CancellationToken cancellationToken)
     {
         // create a combined cancellation token so the caller can stop the client,
@@ -147,7 +148,7 @@ public sealed class ClientEndpoint : IDisposable
         var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
             this.StopTokenSource.Token, cancellationToken);
 
-        var reader = this.ReceiveBuffer.Reader;
+        var reader = this.Inbox.Reader;
         while (!linkedCts.IsCancellationRequested)
         {
             var message = await reader.ReadAsync(linkedCts.Token);
@@ -159,6 +160,7 @@ public sealed class ClientEndpoint : IDisposable
 
         throw new OperationCanceledException();
     }
+    */
 
     public void Dispose()
     {

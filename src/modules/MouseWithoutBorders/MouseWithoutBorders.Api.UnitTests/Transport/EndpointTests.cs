@@ -10,13 +10,13 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MouseWithoutBorders.Api.Models.Messages;
 using MouseWithoutBorders.Api.Transport;
 
-namespace MouseWithoutBorders.Api.UnitTests.Core;
+namespace MouseWithoutBorders.Api.UnitTests.Transport;
 
 [TestClass]
 public class EndPointTests
 {
     /// <summary>
-    /// Spins up a local api server and client, then pumps a collection of dummy messages
+    /// Spins up a loopback api server and client, then pumps a collection of dummy messages
     /// from the client to the server. The server echoes the messages back to the client
     /// as responses, and a separate consumer task reads the messages from the client buffer.
     /// </summary>
@@ -34,7 +34,7 @@ public class EndPointTests
 
         // start the server
         var serverCount = 0;
-        var server = new ServerEndpoint(
+        var serverEndpoint = new ServerEndpoint(
             logger: logger,
             name: "server",
             address: IPAddress.Loopback,
@@ -54,62 +54,60 @@ public class EndPointTests
             });
 
         var serverTask = Task.Run(
-            () => server
+            () => serverEndpoint
                 .StartServerAsync(cancellationTokenSource.Token)
                 .ConfigureAwait(false));
 
         // start the client
-        using var localClient = new ClientEndpoint(
+        using var clientEndpoint = new ClientEndpoint(
             logger: logger,
             name: "client",
             serverAddress: IPAddress.Loopback,
             serverPort: 12345);
-        await localClient.ConnectAsync();
+        await clientEndpoint.ConnectAsync();
 
         // start a consumer that will drain the client buffer
-        var clientCount = 0;
+        // (this simulates an application reading the responses)
+        var consumerCount = 0;
         var consumerTask = Task.Run(async () =>
         {
             while (!cancellationTokenSource.Token.IsCancellationRequested)
             {
-                var message = await localClient
+                var message = await clientEndpoint
                     .ReadMessageAsync(cancellationTokenSource.Token)
                     .ConfigureAwait(false);
-                Interlocked.Increment(ref clientCount);
+                Interlocked.Increment(ref consumerCount);
             }
         });
 
-        // push test messages onto the client
+        // push a bunch of test messages onto the client
         var messageCount = 250_000;
         for (var i = 0; i < messageCount; i++)
         {
-            await localClient
+            await clientEndpoint
                 .SendMessageAsync(new Message(i, 1))
                 .ConfigureAwait(false);
         }
 
-        // wait for all messages to be roundtripped and consumed
-        while (serverCount < messageCount)
+        // make sure we don't take too long to process all the messages.
+        // 250,000 messages roundtrip in about 12.5 seconds on my machine (~20,000/s),
+        // so lets give it a little bit longer to avoid lots of test failures
+        var timeoutTask = Task.Delay(TimeSpan.FromSeconds(20));
+
+        // run a sleep loop to wait for all messages to be roundtripped and consumed
+        while ((serverCount < messageCount) || (consumerCount < messageCount))
         {
-            var timeoutTask = Task.Delay(250);
-            var completedTask = await Task.WhenAny(
-                Task.WhenAll(serverTask, consumerTask),
-                timeoutTask);
-            if (completedTask != timeoutTask)
+            var completedTask = await Task.WhenAny(timeoutTask, Task.Delay(250)).ConfigureAwait(false);
+            if (completedTask == timeoutTask)
             {
-                break;
+                Assert.Fail("Test took too long!");
             }
         }
 
         stopwatch.Stop();
 
-        // make sure we didn't take too long.
-        // 250,000 messages roundtrip in about 20 seconds on my machine (= 12,500/s),
-        // so lets give it a little bit longer to avoid lots of test failures
-        Assert.IsTrue(stopwatch.Elapsed < TimeSpan.FromSeconds(25), "Test took too long!");
-
         // make sure we didn't drop any messages
         Assert.AreEqual(messageCount, serverCount);
-        Assert.AreEqual(messageCount, clientCount);
+        Assert.AreEqual(messageCount, consumerCount);
     }
 }
