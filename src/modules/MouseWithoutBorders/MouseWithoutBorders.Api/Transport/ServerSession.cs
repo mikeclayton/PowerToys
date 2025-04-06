@@ -60,7 +60,7 @@ public sealed class ServerSession : IDisposable
     public async Task ConnectAsync(CancellationToken cancellationToken)
     {
         // await a dummy task to the compiler doesn't complain about "async"
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
 
         // create a combined cancellation token so the caller can stop the client,
         // or we can stop it without having to cancel the caller's token
@@ -82,7 +82,7 @@ public sealed class ServerSession : IDisposable
     /// </summary>
     public async Task SendMessageAsync(Message message, CancellationToken cancellationToken = default)
     {
-        await this.Outbox.Writer.WriteAsync(message, cancellationToken);
+        await this.Outbox.Writer.WriteAsync(message, cancellationToken).ConfigureAwait(false);
     }
 
     internal async Task ReceiveMessagesAsync(CancellationToken cancellationToken)
@@ -91,14 +91,14 @@ public sealed class ServerSession : IDisposable
         while (!cancellationToken.IsCancellationRequested)
         {
             // read the next incoming message
-            var message = await EndpointHelper.ReadMessageAsync(inboundStream, cancellationToken);
+            var message = await EndpointHelper.ReadMessageAsync(inboundStream, cancellationToken).ConfigureAwait(false);
             if (message == null)
             {
                 return;
             }
 
             // process the message
-            await this.Server.ReceiveMessageAsync(this, message, cancellationToken);
+            await this.Server.ReceiveMessageAsync(this, message, cancellationToken).ConfigureAwait(false);
         }
     }
 

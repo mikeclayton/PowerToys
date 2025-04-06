@@ -29,10 +29,10 @@ internal static class EndpointHelper
         while (!cancellationToken.IsCancellationRequested)
         {
             // read a message from the "sender" channel
-            var message = await channelReader.ReadAsync(cancellationToken);
+            var message = await channelReader.ReadAsync(cancellationToken).ConfigureAwait(false);
 
             // write the message to the network stream for the server to pick up
-            await EndpointHelper.WriteMessageAsync(outboundStream, message, cancellationToken);
+            await EndpointHelper.WriteMessageAsync(outboundStream, message, cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -52,14 +52,14 @@ internal static class EndpointHelper
         while (!linkedCts.IsCancellationRequested)
         {
             // read a message from the network stream
-            var message = await EndpointHelper.ReadMessageAsync(inboundStream, linkedCts.Token);
+            var message = await EndpointHelper.ReadMessageAsync(inboundStream, linkedCts.Token).ConfigureAwait(false);
             if (message == null)
             {
                 return;
             }
 
             // write the message to the "receive" channel for the caller to pick up
-            await channelWriter.WriteAsync(message, linkedCts.Token);
+            await channelWriter.WriteAsync(message, linkedCts.Token).ConfigureAwait(false);
         }
     }
 
@@ -67,7 +67,7 @@ internal static class EndpointHelper
     {
         // read the correlation id
         var correlationIdBuffer = new byte[4];
-        var correlationIdBytesRead = await EndpointHelper.ReadExactlyAsync(inboundStream, correlationIdBuffer, correlationIdBuffer.Length, cancellationToken);
+        var correlationIdBytesRead = await EndpointHelper.ReadExactlyAsync(inboundStream, correlationIdBuffer, correlationIdBuffer.Length, cancellationToken).ConfigureAwait(false);
         if (correlationIdBytesRead != correlationIdBuffer.Length)
         {
             // client disconnected?
@@ -78,7 +78,7 @@ internal static class EndpointHelper
 
         // read the message type
         var messageTypeBuffer = new byte[4];
-        var messageTypeBytesRead = await EndpointHelper.ReadExactlyAsync(inboundStream, messageTypeBuffer, messageTypeBuffer.Length, cancellationToken);
+        var messageTypeBytesRead = await EndpointHelper.ReadExactlyAsync(inboundStream, messageTypeBuffer, messageTypeBuffer.Length, cancellationToken).ConfigureAwait(false);
         if (messageTypeBytesRead != messageTypeBuffer.Length)
         {
             // client disconnected?
@@ -89,7 +89,7 @@ internal static class EndpointHelper
 
         // read the data length
         var messageDataLengthBuffer = new byte[4];
-        var messageDataLengthBytesRead = await EndpointHelper.ReadExactlyAsync(inboundStream, messageDataLengthBuffer, 4, cancellationToken);
+        var messageDataLengthBytesRead = await EndpointHelper.ReadExactlyAsync(inboundStream, messageDataLengthBuffer, 4, cancellationToken).ConfigureAwait(false);
         if (messageDataLengthBytesRead != messageDataLengthBuffer.Length)
         {
             // client disconnected?
@@ -100,7 +100,7 @@ internal static class EndpointHelper
 
         // read the data buffer
         var messageData = new byte[messageDataLength];
-        var messageDataBytesRead = await EndpointHelper.ReadExactlyAsync(inboundStream, messageData, messageDataLength, cancellationToken);
+        var messageDataBytesRead = await EndpointHelper.ReadExactlyAsync(inboundStream, messageData, messageDataLength, cancellationToken).ConfigureAwait(false);
         if (messageDataBytesRead != messageData.Length)
         {
             // client disconnected?
@@ -118,7 +118,7 @@ internal static class EndpointHelper
         {
             var bytesRead = await inboundStream.ReadAsync(
                 buffer: buffer.AsMemory(totalBytes, count - totalBytes),
-                cancellationToken: cancellationToken);
+                cancellationToken: cancellationToken).ConfigureAwait(false);
             if (bytesRead == 0)
             {
                 break;
@@ -132,30 +132,30 @@ internal static class EndpointHelper
 
     public static async Task WriteMessageAsync(Stream outboundStream, Message message, CancellationToken token = default)
     {
-        await EndpointHelper.WriteMessageAsync(outboundStream, message.CorrelationId, message.MessageType, message.MessageData, token);
+        await EndpointHelper.WriteMessageAsync(outboundStream, message.CorrelationId, message.MessageType, message.MessageData, token).ConfigureAwait(false);
     }
 
     public static async Task WriteMessageAsync(Stream outboundStream, int correlationId, int messageType, byte[]? messageData, CancellationToken cancellationToken = default)
     {
         // write the correlation id
         var correlationIdBuffer = BitConverter.GetBytes(IPAddress.HostToNetworkOrder(correlationId));
-        await outboundStream.WriteAsync(correlationIdBuffer, cancellationToken);
+        await outboundStream.WriteAsync(correlationIdBuffer, cancellationToken).ConfigureAwait(false);
 
         // write the message type
         var messageTypeBuffer = BitConverter.GetBytes(IPAddress.HostToNetworkOrder(messageType));
-        await outboundStream.WriteAsync(messageTypeBuffer, cancellationToken);
+        await outboundStream.WriteAsync(messageTypeBuffer, cancellationToken).ConfigureAwait(false);
 
         // write the data length
         var messageLength = messageData?.Length ?? 0;
         var messageLengthBuffer = BitConverter.GetBytes(IPAddress.HostToNetworkOrder(messageLength));
-        await outboundStream.WriteAsync(messageLengthBuffer, cancellationToken);
+        await outboundStream.WriteAsync(messageLengthBuffer, cancellationToken).ConfigureAwait(false);
 
         // write the data buffer
         if (messageData != null)
         {
-            await outboundStream.WriteAsync(messageData, cancellationToken);
+            await outboundStream.WriteAsync(messageData, cancellationToken).ConfigureAwait(false);
         }
 
-        await outboundStream.FlushAsync(cancellationToken);
+        await outboundStream.FlushAsync(cancellationToken).ConfigureAwait(false);
     }
 }

@@ -79,7 +79,7 @@ public sealed class ServerEndpoint : IDisposable
 
         while (!cancellationToken.IsCancellationRequested)
         {
-            var client = await listener.AcceptTcpClientAsync(cancellationToken);
+            var client = await listener.AcceptTcpClientAsync(cancellationToken).ConfigureAwait(false);
             var clientEndpoint = client.Client.RemoteEndPoint as IPEndPoint
                 ?? throw new InvalidOperationException();
             this.Logger.LogInformation(
@@ -95,12 +95,12 @@ public sealed class ServerEndpoint : IDisposable
     {
         this.Logger.LogInformation($"server: {nameof(HandleClientAsync)}");
         var serverSession = new ServerSession(this.Logger, this, tcpClient);
-        await serverSession.ConnectAsync(cancellationToken);
+        await serverSession.ConnectAsync(cancellationToken).ConfigureAwait(false);
     }
 
     internal async Task ReceiveMessageAsync(ServerSession session, Message message, CancellationToken cancellationToken)
     {
-        await this.Callback.Invoke(this, session, message, cancellationToken);
+        await this.Callback.Invoke(this, session, message, cancellationToken).ConfigureAwait(false);
     }
 
     public void Dispose()

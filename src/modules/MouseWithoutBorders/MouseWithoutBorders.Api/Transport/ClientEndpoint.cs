@@ -100,7 +100,7 @@ public sealed class ClientEndpoint : IDisposable
         // open a connection to the server
         this.Logger.LogInformation("client: connecting to server");
         this.TcpClient = new TcpClient();
-        await this.TcpClient.ConnectAsync(this.ServerAddress, this.ServerPort, cancellationToken);
+        await this.TcpClient.ConnectAsync(this.ServerAddress, this.ServerPort, cancellationToken).ConfigureAwait(false);
         this.Logger.LogInformation("client: connected to server");
 
         // create a combined cancellation token so the caller can stop the client,
@@ -125,7 +125,7 @@ public sealed class ClientEndpoint : IDisposable
     /// </summary>
     public async Task SendMessageAsync(Message message, CancellationToken cancellationToken = default)
     {
-        await this.Outbox.Writer.WriteAsync(message, cancellationToken);
+        await this.Outbox.Writer.WriteAsync(message, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<Message> ReadMessageAsync(CancellationToken cancellationToken)
@@ -136,7 +136,7 @@ public sealed class ClientEndpoint : IDisposable
             this.StopTokenSource.Token, cancellationToken);
 
         var reader = this.Inbox.Reader;
-        var message = await reader.ReadAsync(linkedCts.Token);
+        var message = await reader.ReadAsync(linkedCts.Token).ConfigureAwait(false);
         return message;
     }
 
@@ -151,7 +151,7 @@ public sealed class ClientEndpoint : IDisposable
         var reader = this.Inbox.Reader;
         while (!linkedCts.IsCancellationRequested)
         {
-            var message = await reader.ReadAsync(linkedCts.Token);
+            var message = await reader.ReadAsync(linkedCts.Token).ConfigureAwait(false);
             if (predicate(message))
             {
                 return message;
