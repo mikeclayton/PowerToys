@@ -5,6 +5,7 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Channels;
+
 using Message = MouseWithoutBorders.Api.Models.Messages.Message;
 
 namespace MouseWithoutBorders.Api.Transport;
@@ -53,71 +54,50 @@ internal static class EndpointHelper
         {
             // read a message from the network stream
             var message = await EndpointHelper.ReadMessageAsync(inboundStream, linkedCts.Token).ConfigureAwait(false);
-            if (message == null)
-            {
-                return;
-            }
 
             // write the message to the "receive" channel for the caller to pick up
             await channelWriter.WriteAsync(message, linkedCts.Token).ConfigureAwait(false);
         }
     }
 
-    public static async Task<Message?> ReadMessageAsync(Stream inboundStream, CancellationToken cancellationToken)
+    public static async Task<Message> ReadMessageAsync(Stream inboundStream, CancellationToken cancellationToken)
     {
         // read the correlation id
         var correlationIdBuffer = new byte[4];
-        var correlationIdBytesRead = await EndpointHelper.ReadExactlyAsync(inboundStream, correlationIdBuffer, correlationIdBuffer.Length, cancellationToken).ConfigureAwait(false);
-        if (correlationIdBytesRead != correlationIdBuffer.Length)
-        {
-            // client disconnected?
-            return null;
-        }
-
-        var correlationId = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(correlationIdBuffer, 0));
+        await EndpointHelper.FillBufferAsync(inboundStream, correlationIdBuffer, cancellationToken).ConfigureAwait(false);
+        var correlationId = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(correlationIdBuffer));
 
         // read the message type
         var messageTypeBuffer = new byte[4];
-        var messageTypeBytesRead = await EndpointHelper.ReadExactlyAsync(inboundStream, messageTypeBuffer, messageTypeBuffer.Length, cancellationToken).ConfigureAwait(false);
-        if (messageTypeBytesRead != messageTypeBuffer.Length)
-        {
-            // client disconnected?
-            return null;
-        }
-
-        var messageType = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(messageTypeBuffer, 0));
+        await EndpointHelper.FillBufferAsync(inboundStream, messageTypeBuffer, cancellationToken).ConfigureAwait(false);
+        var messageType = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(messageTypeBuffer));
 
         // read the data length
         var messageDataLengthBuffer = new byte[4];
-        var messageDataLengthBytesRead = await EndpointHelper.ReadExactlyAsync(inboundStream, messageDataLengthBuffer, 4, cancellationToken).ConfigureAwait(false);
-        if (messageDataLengthBytesRead != messageDataLengthBuffer.Length)
-        {
-            // client disconnected?
-            return null;
-        }
-
-        var messageDataLength = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(messageDataLengthBuffer, 0));
+        await EndpointHelper.FillBufferAsync(inboundStream, messageDataLengthBuffer, cancellationToken).ConfigureAwait(false);
+        var messageDataLength = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(messageDataLengthBuffer));
 
         // read the data buffer
         var messageData = new byte[messageDataLength];
-        var messageDataBytesRead = await EndpointHelper.ReadExactlyAsync(inboundStream, messageData, messageDataLength, cancellationToken).ConfigureAwait(false);
-        if (messageDataBytesRead != messageData.Length)
-        {
-            // client disconnected?
-            return null;
-        }
+        await EndpointHelper.FillBufferAsync(inboundStream, messageData, cancellationToken).ConfigureAwait(false);
 
         var message = new Message(correlationId, messageType, messageData);
         return message;
     }
 
-    private static async Task<int> ReadExactlyAsync(Stream inboundStream, byte[] buffer, int count, CancellationToken cancellationToken)
+    /// <summary>
+    /// Reads data from the stream into the provided buffer until the buffer is filled.
+    /// </summary>
+    /// <param name="inboundStream">The stream to read from.</param>
+    /// <param name="buffer">The buffer to fill with data.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    private static async Task FillBufferAsync(Stream inboundStream, Memory<byte> buffer, CancellationToken cancellationToken)
     {
-        int totalBytes = 0;
-        while (totalBytes < count)
+        var totalBytes = 0;
+        while ((totalBytes < buffer.Length) && !cancellationToken.IsCancellationRequested)
         {
             var bytesRead = await inboundStream.ReadAsync(
-                buffer: buffer.AsMemory(totalBytes, count - totalBytes),
+                buffer: buffer[totalBytes..buffer.Length],
                 cancellationToken: cancellationToken).ConfigureAwait(false);
             if (bytesRead == 0)
             {
@@ -127,7 +107,10 @@ internal static class EndpointHelper
             totalBytes += bytesRead;
         }
 
-        return totalBytes;
+        if (totalBytes != buffer.Length)
+        {
+            throw new InvalidOperationException();
+        }
     }
 
     public static async Task WriteMessageAsync(Stream outboundStream, Message message, CancellationToken token = default)

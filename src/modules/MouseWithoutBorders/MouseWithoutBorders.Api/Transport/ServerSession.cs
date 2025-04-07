@@ -3,8 +3,8 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Net.Sockets;
-using System.Threading;
 using System.Threading.Channels;
+
 using Microsoft.Extensions.Logging;
 
 using Message = MouseWithoutBorders.Api.Models.Messages.Message;
@@ -59,7 +59,8 @@ public sealed class ServerSession : IDisposable
 
     public async Task ConnectAsync(CancellationToken cancellationToken)
     {
-        // await a dummy task to the compiler doesn't complain about "async"
+        // await a dummy task so the compiler doesn't complain about "async"
+        // on a method with no "await" statements
         await Task.CompletedTask.ConfigureAwait(false);
 
         // create a combined cancellation token so the caller can stop the client,
@@ -92,10 +93,6 @@ public sealed class ServerSession : IDisposable
         {
             // read the next incoming message
             var message = await EndpointHelper.ReadMessageAsync(inboundStream, cancellationToken).ConfigureAwait(false);
-            if (message == null)
-            {
-                return;
-            }
 
             // process the message
             await this.Server.ReceiveMessageAsync(this, message, cancellationToken).ConfigureAwait(false);

@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Sockets;
 
 using Microsoft.Extensions.Logging;
+
 using Message = MouseWithoutBorders.Api.Models.Messages.Message;
 
 #pragma warning disable CA1848 // Use the LoggerMethod delegates
@@ -72,28 +73,34 @@ public sealed class ServerEndpoint : IDisposable
 
     public async Task StartServerAsync(CancellationToken cancellationToken = default)
     {
-        this.Logger.LogInformation("server: starting listener...");
+        this.Logger.LogInformation("server {ServerName}: starting listener...", this.Name);
         var listener = new TcpListener(this.Address, this.Port);
         listener.Start();
-        this.Logger.LogInformation("server: listener started...");
+        this.Logger.LogInformation("server {ServerName}: listener started...", this.Name);
 
         while (!cancellationToken.IsCancellationRequested)
         {
+            // listen for a new client connection
             var client = await listener.AcceptTcpClientAsync(cancellationToken).ConfigureAwait(false);
             var clientEndpoint = client.Client.RemoteEndPoint as IPEndPoint
                 ?? throw new InvalidOperationException();
             this.Logger.LogInformation(
-                "server: client connection accepted from '{RemoteEndpointAddress}:{RemoteEndpointPort}'",
+                "server {ServerName}: client connection accepted from '{RemoteEndpointAddress}:{RemoteEndpointPort}'",
+                this.Name,
                 clientEndpoint.Address,
                 clientEndpoint.Port);
 
+            // spin up a task to handle messages from the client
             _ = Task.Run(() => this.HandleClientAsync(client, cancellationToken), cancellationToken);
         }
     }
 
     private async Task HandleClientAsync(TcpClient tcpClient, CancellationToken cancellationToken = default)
     {
-        this.Logger.LogInformation($"server: {nameof(HandleClientAsync)}");
+        this.Logger.LogInformation(
+            "server {ServerName}: {MethodName}",
+            this.Name,
+            nameof(HandleClientAsync));
         var serverSession = new ServerSession(this.Logger, this, tcpClient);
         await serverSession.ConnectAsync(cancellationToken).ConfigureAwait(false);
     }

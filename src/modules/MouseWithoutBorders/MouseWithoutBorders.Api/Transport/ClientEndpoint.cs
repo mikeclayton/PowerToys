@@ -98,10 +98,10 @@ public sealed class ClientEndpoint : IDisposable
     public async Task ConnectAsync(CancellationToken cancellationToken = default)
     {
         // open a connection to the server
-        this.Logger.LogInformation("client: connecting to server");
+        this.Logger.LogInformation("client {ClientName}: connecting to server", this.Name);
         this.TcpClient = new TcpClient();
         await this.TcpClient.ConnectAsync(this.ServerAddress, this.ServerPort, cancellationToken).ConfigureAwait(false);
-        this.Logger.LogInformation("client: connected to server");
+        this.Logger.LogInformation("client {ClientName}: connected to server", this.Name);
 
         // create a combined cancellation token so the caller can stop the client,
         // or we can stop it without having to cancel the caller's token
@@ -110,14 +110,14 @@ public sealed class ClientEndpoint : IDisposable
 
         // listen for messages coming back from the server
         // (start this first so we don't miss any response messages)
-        this.Logger.LogInformation("client: starting network reader");
+        this.Logger.LogInformation("client {ClientName}: starting network reader", this.Name);
         _ = Task.Run(() => EndpointHelper.StartNetworkReceiverAsync(this.TcpClient, this.Inbox, linkedCts.Token), cancellationToken);
-        this.Logger.LogInformation("client: network reader started...");
+        this.Logger.LogInformation("client {ClientName}: network reader started...", this.Name);
 
         // pump messages from the client's "send" buffer up to the server
-        this.Logger.LogInformation("client: starting network writer");
+        this.Logger.LogInformation("client {ClientName}: starting network writer", this.Name);
         _ = Task.Run(() => EndpointHelper.StartNetworkSenderAsync(this.Outbox, this.TcpClient, linkedCts.Token), cancellationToken);
-        this.Logger.LogInformation("client: network writer started...");
+        this.Logger.LogInformation("client {ClientName}: network writer started...", this.Name);
     }
 
     /// <summary>
@@ -139,28 +139,6 @@ public sealed class ClientEndpoint : IDisposable
         var message = await reader.ReadAsync(linkedCts.Token).ConfigureAwait(false);
         return message;
     }
-
-    /*
-    public async Task<Message> WaitForMessageAsync(Func<Message, bool> predicate, CancellationToken cancellationToken)
-    {
-        // create a combined cancellation token so the caller can stop the client,
-        // or we can stop it without having to cancel the caller's token
-        var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
-            this.StopTokenSource.Token, cancellationToken);
-
-        var reader = this.Inbox.Reader;
-        while (!linkedCts.IsCancellationRequested)
-        {
-            var message = await reader.ReadAsync(linkedCts.Token).ConfigureAwait(false);
-            if (predicate(message))
-            {
-                return message;
-            }
-        }
-
-        throw new OperationCanceledException();
-    }
-    */
 
     public void Dispose()
     {

@@ -32,7 +32,7 @@ public class EndPointTests
 
         var stopwatch = Stopwatch.StartNew();
 
-        // start the server
+        // build the server
         var serverCount = 0;
         var serverEndpoint = new ServerEndpoint(
             logger: logger,
@@ -53,17 +53,20 @@ public class EndPointTests
                     cancellationToken);
             });
 
+        // start the server
         var serverTask = Task.Run(
             () => serverEndpoint
                 .StartServerAsync(cancellationTokenSource.Token)
                 .ConfigureAwait(false));
 
-        // start the client
+        // build the client
         using var clientEndpoint = new ClientEndpoint(
             logger: logger,
             name: "client",
             serverAddress: IPAddress.Loopback,
             serverPort: 12345);
+
+        // start the client
         await clientEndpoint.ConnectAsync();
 
         // start a consumer that will drain the client buffer
@@ -85,16 +88,17 @@ public class EndPointTests
         for (var i = 0; i < messageCount; i++)
         {
             await clientEndpoint
-                .SendMessageAsync(new Message(i, 1))
+                .SendMessageAsync(new Message(i, (int)MessageType.HeartbeatMessage))
                 .ConfigureAwait(false);
         }
 
         // make sure we don't take too long to process all the messages.
-        // 250,000 messages roundtrip in about 12.5 seconds on my machine (~20,000/s),
+        // 250,000 messages take about 10 seconds to roundtrip on my machine (~25,000/s),
         // so lets give it a little bit longer to avoid lots of test failures
-        var timeoutTask = Task.Delay(TimeSpan.FromSeconds(20));
+        var timeoutTask = Task.Delay(TimeSpan.FromSeconds(12.5));
 
         // run a sleep loop to wait for all messages to be roundtripped and consumed
+        // (or until we hit our timeout, so that we don't run forever)
         while ((serverCount < messageCount) || (consumerCount < messageCount))
         {
             var completedTask = await Task.WhenAny(timeoutTask, Task.Delay(250)).ConfigureAwait(false);
@@ -106,7 +110,7 @@ public class EndPointTests
 
         stopwatch.Stop();
 
-        // make sure we didn't drop any messages
+        // make sure we processed all messages
         Assert.AreEqual(messageCount, serverCount);
         Assert.AreEqual(messageCount, consumerCount);
     }
