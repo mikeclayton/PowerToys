@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using MouseWithoutBorders.Class;
+using MouseWithoutBorders.Machines;
 
 // <summary>
 //     Keyboard/Mouse hook callback implementation.
@@ -72,7 +73,29 @@ internal static class Event
 
             if (isEasyMouseEnabled && Common.Sk != null && (Common.DesMachineID == Common.MachineID || !Setting.Values.MoveMouseRelatively) && e.dwFlags == WM.WM_MOUSEMOVE)
             {
-                Point p = MachineStuff.MoveToMyNeighbourIfNeeded(e.X, e.Y, MachineStuff.desMachineID);
+                // MoveState doesn't check specifically for the "BlockMouseAtCorners" flag - it just uses whatever
+                // list of sensitive points we provide, so we need to pre-filter the list and pass an empty array
+                // if BlockMouseAtCorners is disabled
+                var sensitivePoints = Setting.Values.BlockMouseAtCorners ? WinAPI.SensitivePoints : [];
+
+                // collect together a bunch of global state values into a MoveState *instance*
+                // (this is a refactoring seam that allows MoveCalculator to be decoupled from global state and makes it easier to test)
+                var moveState = new MoveState(
+                    Common.GetTick(),
+                    MachineStuff.lastJump,
+                    sensitivePoints,
+                    MachineStuff.MachineMatrix,
+                    Common.MachineID,
+                    Setting.Values.MoveMouseRelatively,
+                    MachineStuff.desktopBounds,
+                    MachineStuff.primaryScreenBounds);
+
+                var moveResult = MoveCalculator.MoveToMyNeighbourIfNeeded(moveState, e.X, e.Y, MachineStuff.desMachineID);
+
+                // unpack the MoveResult back into the application variables
+                // (this is another consequence of decoupling MoveCalculator from global state)
+                MachineStuff.desMachineID = moveResult.NewDestinationMachineId;
+                var p = moveResult.Point;
 
                 // Check if easy mouse switches are disabled when an application is running in fullscreen mode,
                 // if they are, check that there is no application running in fullscreen mode before switching.
