@@ -23,6 +23,7 @@ using Microsoft.PowerToys.Telemetry;
 // </history>
 using MouseWithoutBorders.Class;
 using MouseWithoutBorders.Core;
+using MouseWithoutBorders.Machines;
 using MouseWithoutBorders.Properties;
 
 using Clipboard = MouseWithoutBorders.Core.Clipboard;
@@ -30,7 +31,6 @@ using Timer = System.Windows.Forms.Timer;
 
 [module: SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes", Scope = "member", Target = "MouseWithoutBorders.frmScreen.#ShowMouseWithoutBordersUiOnWinLogonDesktop(System.Boolean)", Justification = "Dotnet port with style preservation")]
 [module: SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes", Scope = "member", Target = "MouseWithoutBorders.frmScreen.#ChangeIcon(System.Int32)", Justification = "Dotnet port with style preservation")]
-[module: SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes", Scope = "member", Target = "MouseWithoutBorders.frmScreen.#UpdateMenu(MouseWithoutBorders.MachineInf[])", Justification = "Dotnet port with style preservation")]
 [module: SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes", Scope = "member", Target = "MouseWithoutBorders.frmScreen.#frmScreen_Load(System.Object,System.EventArgs)", Justification = "Dotnet port with style preservation")]
 [module: SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes", Scope = "member", Target = "MouseWithoutBorders.frmScreen.#MenuNewVersion(System.Object,System.EventArgs)", Justification = "Dotnet port with style preservation")]
 [module: SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes", Scope = "member", Target = "MouseWithoutBorders.frmScreen.#.ctor()", Justification = "Dotnet port with style preservation")]
@@ -175,6 +175,7 @@ namespace MouseWithoutBorders
             MachineStuff.SwitchToMachine(name);
         }
 
+        [SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes", Justification = "Dotnet port with style preservation")]
         internal void UpdateMenu()
         {
             try
@@ -202,15 +203,15 @@ namespace MouseWithoutBorders
 
                 for (int i = 0; i < MachineStuff.MAX_MACHINE; i++)
                 {
-                    string newMachine = MachineStuff.MachineMatrix[i].Trim();
+                    string newMachine = MachineStuff.MachineMatrix.GetHostname(i);
 
-                    if (MachineStuff.MachinePool.TryFindMachineByName(newMachine, out MachineInf inf) && MachinePool.IsAlive(inf))
+                    if (MachineStuff.MachineMatrix.TryGetEntryByHostname(newMachine, out MachineEntry inf) && MachineService.IsAlive(inf, Common.GetTick(), MachineStuff.HEARTBEAT_TIMEOUT, Common.IsConnectedTo))
                     {
                         ToolStripMenuItem newItem = new(
                             newMachine,
                             null,
                             new EventHandler(MenuOnClick));
-                        newItem.Tag = "MACHINE: " + inf.Name;
+                        newItem.Tag = "MACHINE: " + inf.Hostname;
                         newItem.ToolTipText = "Switch Mouse/keyboard to " + newMachine;
                         newItem.Visible = true;
                         _ = MainMenu.Items.Add(newItem);
@@ -218,14 +219,14 @@ namespace MouseWithoutBorders
                         if (!newMachine.Equals(Common.MachineName.Trim(), StringComparison.OrdinalIgnoreCase))
                         {
                             ToolStripMenuItem newItem2 = new(
-                                inf.Name.Trim(),
+                                inf.Hostname.Trim(),
                                 null,
                                 new EventHandler(MenuSendScreenCaptureClick));
                             newItem2.Visible = true;
                             _ = menuSendScreenCapture.DropDown.Items.Add(newItem2);
 
                             ToolStripMenuItem newItem3 = new(
-                                inf.Name.Trim(),
+                                inf.Hostname.Trim(),
                                 null,
                                 new EventHandler(MenuGetScreenCaptureClick));
                             newItem3.Visible = true;
@@ -554,12 +555,10 @@ namespace MouseWithoutBorders
                         Logger.LogStatistics();
 
                         // Need to review this code on why it is needed (moved from MoveToMyNeighbourIfNeeded(...))
-                        for (int i = 0; i < MachineStuff.MachineMatrix.Length; i++)
+                        if (!MachineStuff.MachineMatrix.TryGetEntryByHostname(Common.MachineName.Trim(), out _))
                         {
-                            if (string.IsNullOrEmpty(MachineStuff.MachineMatrix[i]) && !MachineStuff.InMachineMatrix(Common.MachineName))
-                            {
-                                MachineStuff.MachineMatrix[i] = Common.MachineName;
-                            }
+                            _ = MachineStuff.MachineMatrix.TryAddMachine(Common.MachineName, out _);
+                            MachineStuff.SaveMachineMatrixToSettings();
                         }
 
                         if (count % 600 == 0 && Common.Sk != null)
@@ -873,25 +872,16 @@ namespace MouseWithoutBorders
 
         internal void UpdateNotifyIcon()
         {
-            string[] x = MachineStuff.MachineMatrix;
+            string h0 = MachineStuff.MachineMatrix.GetHostname(0);
+            string h1 = MachineStuff.MachineMatrix.GetHostname(1);
+            string h2 = MachineStuff.MachineMatrix.GetHostname(2);
+            string h3 = MachineStuff.MachineMatrix.GetHostname(3);
             string iconText;
-            if (x != null && (x[0].Length > 0 || x[1].Length > 0 || x[2].Length > 0 || x[3].Length > 0))
+            if (h0.Length > 0 || h1.Length > 0 || h2.Length > 0 || h3.Length > 0)
             {
                 iconText = Setting.Values.MatrixOneRow
-                    ? string.Format(
-                        CultureInfo.CurrentCulture,
-                        "[{0}][{1}][{2}][{3}]",
-                        x[0].Trim(),
-                        x[1].Trim(),
-                        x[2].Trim(),
-                        x[3].Trim())
-                    : string.Format(
-                        CultureInfo.CurrentCulture,
-                        "[{0}][{1}]\r\n[{2}][{3}]",
-                        x[0].Trim(),
-                        x[1].Trim(),
-                        x[2].Trim(),
-                        x[3].Trim());
+                    ? string.Format(CultureInfo.CurrentCulture, "[{0}][{1}][{2}][{3}]", h0, h1, h2, h3)
+                    : string.Format(CultureInfo.CurrentCulture, "[{0}][{1}]\r\n[{2}][{3}]", h0, h1, h2, h3);
 
                 SetTrayIconText(iconText);
             }
@@ -1060,11 +1050,11 @@ namespace MouseWithoutBorders
 
                 for (int i = 0; i < MachineStuff.MAX_MACHINE; i++)
                 {
-                    string newMachine = MachineStuff.MachineMatrix[i].Trim();
+                    string newMachine = MachineStuff.MachineMatrix.GetHostname(i);
 
-                    if (MachineStuff.MachinePool.TryFindMachineByName(newMachine, out MachineInf inf) && MachinePool.IsAlive(inf))
+                    if (MachineStuff.MachineMatrix.TryGetEntryByHostname(newMachine, out MachineEntry inf) && MachineService.IsAlive(inf, Common.GetTick(), MachineStuff.HEARTBEAT_TIMEOUT, Common.IsConnectedTo))
                     {
-                        machineMatrix += "[" + inf.Name.Trim() + "]";
+                        machineMatrix += "[" + inf!.Hostname.Trim() + "]";
                     }
                 }
 

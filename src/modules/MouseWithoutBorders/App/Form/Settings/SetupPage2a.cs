@@ -93,10 +93,8 @@ namespace MouseWithoutBorders
                 SecurityCode = Encryption.MyKey;
             }
 
-            MachineStuff.MachineMatrix = new string[MachineStuff.MAX_MACHINE] { ComputerNameField.Text.Trim().ToUpper(CultureInfo.CurrentCulture), Common.MachineName.Trim(), string.Empty, string.Empty };
-
-            string[] machines = MachineStuff.MachineMatrix;
-            MachineStuff.MachinePool.Initialize(machines);
+            MachineStuff.MachineMatrix.Initialize(new string[] { ComputerNameField.Text.Trim().ToUpper(CultureInfo.CurrentCulture), Common.MachineName.Trim() });
+            MachineStuff.SaveMachineMatrixToSettings();
 
             MachineStuff.UpdateMachinePoolStringSetting();
             SendNextPage(new SetupPage3a { ReturnToSettings = !Setting.Values.FirstRun });

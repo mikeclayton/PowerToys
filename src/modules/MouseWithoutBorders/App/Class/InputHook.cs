@@ -625,9 +625,9 @@ namespace MouseWithoutBorders.Class
 
         private static bool Switch2(int index)
         {
-            if (MachineStuff.MachineMatrix != null && MachineStuff.MachineMatrix.Length > index)
+            if (index < MachineStuff.MachineMatrix.MachineCount)
             {
-                string mcName = MachineStuff.MachineMatrix[index].Trim();
+                string mcName = MachineStuff.MachineMatrix.GetHostname(index);
                 if (!string.IsNullOrEmpty(mcName))
                 {
                     // Common.DoSomethingInUIThread(delegate()

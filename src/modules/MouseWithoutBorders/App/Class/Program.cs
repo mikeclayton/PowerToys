@@ -307,10 +307,8 @@ namespace MouseWithoutBorders.Class
                 Setting.Values.MyKey = securityKey;
                 Encryption.MyKey = securityKey;
                 Encryption.MagicNumber = Encryption.Get24BitHash(Encryption.MyKey);
-                MachineStuff.MachineMatrix = new string[MachineStuff.MAX_MACHINE] { pcName.Trim().ToUpper(CultureInfo.CurrentCulture), Common.MachineName.Trim(), string.Empty, string.Empty };
-
-                string[] machines = MachineStuff.MachineMatrix;
-                MachineStuff.MachinePool.Initialize(machines);
+                MachineStuff.MachineMatrix.Initialize(new string[] { pcName.Trim().ToUpper(CultureInfo.CurrentCulture), Common.MachineName.Trim() });
+                MachineStuff.SaveMachineMatrixToSettings();
                 MachineStuff.UpdateMachinePoolStringSetting();
 
                 SocketStuff.InvalidKeyFound = false;

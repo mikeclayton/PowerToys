@@ -22,6 +22,7 @@ using Microsoft.PowerToys.Telemetry;
 // </history>
 using MouseWithoutBorders.Class;
 using MouseWithoutBorders.Core;
+using MouseWithoutBorders.Machines;
 
 using Clipboard = MouseWithoutBorders.Core.Clipboard;
 using Timer = System.Windows.Forms.Timer;
@@ -100,7 +101,8 @@ namespace MouseWithoutBorders
                 }
             }
 
-            MachineStuff.MachineMatrix = st;
+            MachineStuff.MachineMatrix.Initialize(st);
+            MachineStuff.SaveMachineMatrixToSettings();
             Setting.Values.MatrixOneRow = matrixOneRow = !checkBoxTwoRow.Checked;
 
             if (Process.GetCurrentProcess().SessionId != NativeMethods.WTSGetActiveConsoleSessionId())
@@ -152,32 +154,29 @@ namespace MouseWithoutBorders
             bool meAdded = false;
             string machineName;
 
-            if (MachineStuff.MachineMatrix != null && MachineStuff.MachineMatrix.Length == MachineStuff.MAX_MACHINE)
+            Logger.LogDebug("LoadMachines: Machine Matrix: " + Setting.Values.MachineMatrixString);
+
+            for (int i = 0; i < MachineStuff.MAX_MACHINE; i++)
             {
-                Logger.LogDebug("LoadMachines: Machine Matrix: " + Setting.Values.MachineMatrixString);
+                machineName = MachineStuff.MachineMatrix.GetHostname(i);
+                machines[i].MachineName = machineName;
 
-                for (int i = 0; i < MachineStuff.MAX_MACHINE; i++)
+                if (string.IsNullOrEmpty(machineName))
                 {
-                    machineName = MachineStuff.MachineMatrix[i].Trim();
-                    machines[i].MachineName = machineName;
+                    machines[i].CheckAble = true;
+                }
+                else
+                {
+                    machines[i].MachineEnabled = true;
+                }
 
-                    if (string.IsNullOrEmpty(machineName))
+                bool found = MachineStuff.MachineMatrix.TryGetEntryByHostname(machineName, out MachineEntry machineEntry);
+                if (found)
+                {
+                    if (machineEntry.Id == Common.MachineID)
                     {
-                        machines[i].CheckAble = true;
-                    }
-                    else
-                    {
-                        machines[i].MachineEnabled = true;
-                    }
-
-                    bool found = MachineStuff.MachinePool.TryFindMachineByName(machineName, out MachineInf machineInfo);
-                    if (found)
-                    {
-                        if (machineInfo.Id == Common.MachineID)
-                        {
-                            machines[i].LocalHost = true;
-                            meAdded = true;
-                        }
+                        machines[i].LocalHost = true;
+                        meAdded = true;
                     }
                 }
             }
@@ -342,11 +341,11 @@ namespace MouseWithoutBorders
             string newMachine;
             Machine unUsedMachine;
 
-            foreach (MachineInf inf in MachineStuff.MachinePool.ListAllMachines())
+            foreach (MachineEntry inf in MachineStuff.MachineMatrix.GetAllEntries())
             {
                 bool found = false;
                 unUsedMachine = null;
-                newMachine = inf.Name.Trim();
+                newMachine = inf.Hostname.Trim();
                 foreach (Machine m in machines)
                 {
                     if (m.MachineName.Equals(

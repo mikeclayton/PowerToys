@@ -428,15 +428,13 @@ internal static class Clipboard
             if (!Common.IsConnectedByAClientSocketTo(remoteMachine))
             {
                 Logger.Log($"No potential inbound connection from {Common.MachineName} to {remoteMachine}, ask for a push back instead.");
-                ID machineId = MachineStuff.MachinePool.ResolveID(remoteMachine);
-
-                if (machineId != ID.NONE)
+                if (MachineStuff.MachineMatrix.TryGetEntryByHostname(remoteMachine, out var remoteEntry) && remoteEntry!.Id != ID.NONE)
                 {
                     Common.SkSend(
                         new DATA()
                         {
                             Type = PackageType.ClipboardAsk,
-                            Des = machineId,
+                            Des = remoteEntry.Id,
                             MachineName = Common.MachineName,
                             PostAction = clipboardPostAct,
                         },
@@ -837,7 +835,7 @@ internal static class Clipboard
 
                     Logger.LogDebug($"{nameof(ShakeHand)}: Connection from {name}:{package.Src}");
 
-                    if (MachineStuff.MachinePool.ResolveID(name) == package.Src && Common.IsConnectedTo(package.Src))
+                    if (MachineStuff.MachineMatrix.TryGetEntryByHostname(name, out var shakeEntry) && shakeEntry!.Id == package.Src && Common.IsConnectedTo(package.Src))
                     {
                         clientPushData = package.Type == PackageType.ClipboardPush;
                         postAction = package.PostAction;

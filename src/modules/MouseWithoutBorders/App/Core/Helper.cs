@@ -382,7 +382,7 @@ internal static class Helper
         log += $"{Setting.Values.Username}/{Logger.GetChecksum(Encryption.MyKey)}\r\n";
         log += $"{Common.MachineName}/{Common.MachineID}/{Common.DesMachineID}\r\n";
         log += $"Id: {Setting.Values.DeviceId}\r\n";
-        log += $"Matrix: {string.Join(",", MachineStuff.MachineMatrix)}\r\n";
+        log += $"Matrix: {string.Join(",", System.Linq.Enumerable.Range(0, MachineStuff.MAX_MACHINE).Select(i => MachineStuff.MachineMatrix.GetHostname(i)))}\r\n";
         log += $"McPool: {Setting.Values.MachinePoolString}\r\n";
 
         log += "\r\nOPTIONS:\r\n";

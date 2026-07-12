@@ -731,10 +731,9 @@ internal static class Common
         }
         else
         {
-            ID id = MachineStuff.MachinePool.ResolveID(machine);
-            if (id != ID.NONE)
+            if (MachineStuff.MachineMatrix.TryGetEntryByHostname(machine, out var clipEntry) && clipEntry!.Id != ID.NONE)
             {
-                SendPackage(id, PackageType.ClipboardCapture);
+                SendPackage(clipEntry.Id, PackageType.ClipboardCapture);
             }
         }
     }
@@ -923,7 +922,7 @@ internal static class Common
                     {
                         if (t != null && t.BackingSocket != null && (t.Status == SocketStatus.Connected || (t.Status == SocketStatus.Handshaking && includeHandShakingSockets)))
                         {
-                            if (t.MachineId == (uint)data.Des || (data.Des == ID.ALL && t.MachineId != exceptDes && MachineStuff.InMachineMatrix(t.MachineName)))
+                            if (t.MachineId == (uint)data.Des || (data.Des == ID.ALL && t.MachineId != exceptDes && MachineStuff.MachineMatrix.TryGetEntryByHostname(t.MachineName.Trim(), out _)))
                             {
                                 try
                                 {
@@ -1205,9 +1204,9 @@ internal static class Common
     {
         int machineCt = 0;
 
-        foreach (string m in MachineStuff.MachineMatrix)
+        for (int i = 0; i < MachineStuff.MAX_MACHINE; i++)
         {
-            if (!string.IsNullOrEmpty(m.Trim()))
+            if (!string.IsNullOrEmpty(MachineStuff.MachineMatrix.GetHostname(i)))
             {
                 machineCt++;
             }
@@ -1215,8 +1214,9 @@ internal static class Common
 
         if (machineCt < 2 && MachineStuff.Settings != null && (MachineStuff.Settings.GetCurrentPage() is SetupPage1 || MachineStuff.Settings.GetCurrentPage() is SetupPage2b))
         {
-            MachineStuff.MachineMatrix = new string[MachineStuff.MAX_MACHINE] { Common.MachineName.Trim(), desMachine, string.Empty, string.Empty };
-            Logger.LogDebug("UpdateSetupMachineMatrix: " + string.Join(",", MachineStuff.MachineMatrix));
+            MachineStuff.MachineMatrix.Initialize(new string[] { Common.MachineName.Trim(), desMachine });
+            MachineStuff.SaveMachineMatrixToSettings();
+            Logger.LogDebug("UpdateSetupMachineMatrix: " + string.Join(",", System.Linq.Enumerable.Range(0, MachineStuff.MAX_MACHINE).Select(i => MachineStuff.MachineMatrix.GetHostname(i))));
 
             Common.DoSomethingInUIThread(
                 () =>

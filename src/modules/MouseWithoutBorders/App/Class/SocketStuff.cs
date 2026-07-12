@@ -17,17 +17,10 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using MouseWithoutBorders.Core;
 
-// <summary>
-//     Socket code.
-// </summary>
-// <history>
-//     2008 created by Truong Do (ductdo).
-//     2009-... modified by Truong Do (TruongDo).
-//     2023- Included in PowerToys.
-// </history>
+using MouseWithoutBorders.Core;
 using MouseWithoutBorders.Exceptions;
+using MouseWithoutBorders.Machines;
 
 using Clipboard = MouseWithoutBorders.Core.Clipboard;
 using Thread = MouseWithoutBorders.Core.Thread;
@@ -41,7 +34,6 @@ using Thread = MouseWithoutBorders.Core.Thread;
 [module: SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes", Scope = "member", Target = "MouseWithoutBorders.SocketStuff.#MainTCPRoutine(System.Net.Sockets.Socket,System.String)", Justification = "Dotnet port with style preservation")]
 [module: SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes", Scope = "member", Target = "MouseWithoutBorders.SocketStuff.#TCPServerThread(System.Object)", Justification = "Dotnet port with style preservation")]
 [module: SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes", Scope = "member", Target = "MouseWithoutBorders.SocketStuff.#SendClipboardData(System.Object)", Justification = "Dotnet port with style preservation")]
-[module: SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes", Scope = "member", Target = "MouseWithoutBorders.SocketStuff.#StartNewTcpClient(MouseWithoutBorders.MachineInf)", Justification = "Dotnet port with style preservation")]
 [module: SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes", Scope = "member", Target = "MouseWithoutBorders.SocketStuff.#StartNewTcpServer(System.Net.Sockets.Socket,System.String)", Justification = "Dotnet port with style preservation")]
 [module: SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes", Scope = "member", Target = "MouseWithoutBorders.SocketStuff.#UpdateTCPClients()", Justification = "Dotnet port with style preservation")]
 [module: SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes", Scope = "member", Target = "MouseWithoutBorders.SocketStuff.#UpdateTcpSockets(System.Net.Sockets.Socket,MouseWithoutBorders.SocketStatus)", Justification = "Dotnet port with style preservation")]
@@ -49,6 +41,14 @@ using Thread = MouseWithoutBorders.Core.Thread;
 [module: SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes", Scope = "member", Target = "MouseWithoutBorders.SocketStuff.#SendData(System.Byte[],MouseWithoutBorders.IP,System.Int32)", Justification = "Dotnet port with style preservation")]
 [module: SuppressMessage("Microsoft.Design", "CA1001:TypesThatOwnDisposableFieldsShouldBeDisposable", Scope = "type", Target = "MouseWithoutBorders.SocketStuff", Justification = "Dotnet port with style preservation")]
 
+// <summary>
+//     Socket code.
+// </summary>
+// <history>
+//     2008 created by Truong Do (ductdo).
+//     2009-... modified by Truong Do (TruongDo).
+//     2023- Included in PowerToys.
+// </history>
 namespace MouseWithoutBorders.Class
 {
     internal enum SocketStatus : int
@@ -805,13 +805,12 @@ namespace MouseWithoutBorders.Class
 
             try
             {
-                if (MachineStuff.MachineMatrix != null)
                 {
-                    Logger.LogDebug("MachineMatrix = " + string.Join(", ", MachineStuff.MachineMatrix));
+                    Logger.LogDebug("MachineMatrix = " + string.Join(", ", System.Linq.Enumerable.Range(0, MachineStuff.MAX_MACHINE).Select(i => MachineStuff.MachineMatrix.GetHostname(i))));
 
-                    foreach (string st in MachineStuff.MachineMatrix)
+                    foreach (MachineEntry entry in MachineStuff.MachineMatrix.GetAllEntries())
                     {
-                        string machineName = st.Trim();
+                        string machineName = entry.Hostname.Trim();
                         if (!string.IsNullOrEmpty(machineName) &&
                             !machineName.Equals(Common.MachineName.Trim(), StringComparison.OrdinalIgnoreCase))
                         {
@@ -881,6 +880,7 @@ namespace MouseWithoutBorders.Class
             }
         }
 
+        [SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes", Justification = "Dotnet port with style preservation")]
         internal void StartNewTcpClient(string machineName)
         {
             void ClientThread(object obj)
@@ -962,7 +962,7 @@ namespace MouseWithoutBorders.Class
 
                 UpdateTcpSockets(dummyTcp, SocketStatus.NA);
 
-                if (!MachineStuff.InMachineMatrix(machineName))
+                if (!MachineStuff.MachineMatrix.TryGetEntryByHostname(machineName.Trim(), out _))
                 {
                     // While Resolving from name to IP, user may have changed the machine name and clicked on Apply.
                     return;
@@ -1450,18 +1450,18 @@ namespace MouseWithoutBorders.Class
 
                                     Common.SendHeartBeat(initial: true);
 
-                                    if (MachineStuff.MachinePool.TryFindMachineByName(remoteMachine, out MachineInf machineInfo))
+                                    if (MachineStuff.MachineMatrix.TryGetEntryByHostname(remoteMachine, out var machineEntry))
                                     {
                                         Logger.LogDebug("Machine updated: " + remoteMachine + "/" + remoteID.ToString());
 
-                                        if (machineInfo.Name.Equals(MachineStuff.DesMachineName, StringComparison.OrdinalIgnoreCase))
+                                        if (machineEntry!.Hostname.Equals(MachineStuff.DesMachineName, StringComparison.OrdinalIgnoreCase))
                                         {
                                             Logger.LogDebug("Des ID updated: " + Common.DesMachineID.ToString() +
                                                 "/" + remoteID.ToString());
                                             MachineStuff.NewDesMachineID = Common.DesMachineID = remoteID;
                                         }
 
-                                        _ = MachineStuff.MachinePool.TryUpdateMachineID(remoteMachine, remoteID, true);
+                                        _ = MachineStuff.MachineMatrix.TryUpdateMachineID(remoteMachine, remoteID, true, Common.GetTick());
                                         MachineStuff.UpdateMachinePoolStringSetting();
                                     }
                                     else

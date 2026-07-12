@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 
 using MouseWithoutBorders.Class;
+using MouseWithoutBorders.Machines;
 
 [module: SuppressMessage("Microsoft.Reliability", "CA2002:DoNotLockOnObjectsWithWeakIdentity", Scope = "member", Target = "MouseWithoutBorders.Common.#PreProcess(MouseWithoutBorders.DATA)", Justification = "Dotnet port with style preservation")]
 
@@ -153,7 +154,19 @@ internal static class Receiver
                                 package.Md.Y < 0 ? package.Md.Y + Event.MOVE_MOUSE_RELATIVE : package.Md.Y - Event.MOVE_MOUSE_RELATIVE);
                             _ = NativeMethods.GetCursorPos(ref lastXY);
 
-                            Point p = MachineStuff.MoveToMyNeighbourIfNeeded(lastXY.X, lastXY.Y, Common.MachineID);
+                            var sensitivePoints = Setting.Values.BlockMouseAtCorners ? WinAPI.SensitivePoints : [];
+                            var moveState = new MoveState(
+                                Common.GetTick(),
+                                MachineStuff.lastJump,
+                                sensitivePoints,
+                                MachineStuff.MachineMatrix,
+                                Common.MachineID,
+                                Setting.Values.MoveMouseRelatively,
+                                MachineStuff.desktopBounds,
+                                MachineStuff.primaryScreenBounds);
+                            var moveResult = MoveCalculator.MoveToMyNeighbourIfNeeded(moveState, lastXY.X, lastXY.Y, MachineStuff.desMachineID);
+                            MachineStuff.desMachineID = moveResult.NewDestinationMachineId;
+                            Point p = moveResult.Point;
 
                             if (!p.IsEmpty)
                             {
@@ -252,7 +265,7 @@ internal static class Receiver
                 Package.PackageReceived.Hello++;
                 Common.SendHeartBeat();
                 string newMachine = MachineStuff.AddToMachinePool(package);
-                if (Setting.Values.MachineMatrixString == null)
+                if (string.IsNullOrEmpty(Setting.Values.MachineMatrixString))
                 {
                     string tip = newMachine + " saying Hello!";
                     tip += "\r\n Right Click to setup your machine Matrix";
@@ -406,10 +419,10 @@ internal static class Receiver
     internal static void GetNameOfMachineWithClipboardData(DATA package)
     {
         Clipboard.LastIDWithClipboardData = package.Src;
-        List<MachineInf> matchingMachines = MachineStuff.MachinePool.TryFindMachineByID(Clipboard.LastIDWithClipboardData);
-        if (matchingMachines.Count >= 1)
+        MachineEntry matchingMachine = MachineStuff.MachineMatrix.GetEntryById(Clipboard.LastIDWithClipboardData);
+        if (matchingMachine != null)
         {
-            Clipboard.LastMachineWithClipboardData = matchingMachines[0].Name.Trim();
+            Clipboard.LastMachineWithClipboardData = matchingMachine.Hostname.Trim();
         }
 
         /*

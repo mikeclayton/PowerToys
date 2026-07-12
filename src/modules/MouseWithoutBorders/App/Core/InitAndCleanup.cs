@@ -10,6 +10,7 @@ using System.Threading;
 
 using Microsoft.Win32;
 using MouseWithoutBorders.Class;
+using MouseWithoutBorders.Machines;
 using Windows.UI.Input.Preview.Injection;
 
 // <summary>
@@ -41,26 +42,45 @@ internal static class InitAndCleanup
     internal static void UpdateMachineTimeAndID()
     {
         Common.MachineName = Common.MachineName.Trim();
-        _ = MachineStuff.MachinePool.TryUpdateMachineID(Common.MachineName, Common.MachineID, true);
+        _ = MachineStuff.MachineMatrix.TryUpdateMachineID(Common.MachineName, Common.MachineID, true, Common.GetTick());
     }
 
-    private static void InitializeMachinePoolFromSettings()
+    private static void InitializeMachineMatrixFromSettings()
     {
         try
         {
-            MachineInf[] info = MachinePoolHelpers.LoadMachineInfoFromMachinePoolStringSetting(Setting.Values.MachinePoolString);
-            for (int i = 0; i < info.Length; i++)
+            string matrixString = Setting.Values.MachineMatrixString;
+            if (!string.IsNullOrEmpty(matrixString))
             {
-                info[i].Name = info[i].Name.Trim();
+                string[] hostnames = matrixString.Split(',');
+                if (hostnames.Length == MachineStuff.MAX_MACHINE)
+                {
+                    MachineStuff.MachineMatrix.Initialize(hostnames);
+                }
             }
 
-            MachineStuff.MachinePool.Initialize(info);
-            MachineStuff.MachinePool.ResetIPAddressesForDeadMachines(true);
+            if (!string.IsNullOrEmpty(Setting.Values.MachinePoolString))
+            {
+                MachineMatrix poolMatrix = MachineService.DeserializeMachinePoolSetting(
+                    Setting.Values.MachinePoolString, Common.GetTick(), MachineStuff.HEARTBEAT_TIMEOUT);
+                foreach (MachineEntry entry in poolMatrix.GetAllEntries())
+                {
+                    if (!string.IsNullOrEmpty(entry.Hostname) && entry.Id != ID.NONE)
+                    {
+                        _ = MachineStuff.MachineMatrix.TryUpdateMachineID(entry.Hostname, entry.Id, false, Common.GetTick());
+                    }
+                }
+            }
+
+            MachineStuff.MachineMatrix.RemoveIdsFromEntries(
+                true,
+                Common.MachineName,
+                entry => MachineService.IsAlive(entry, Common.GetTick(), MachineStuff.HEARTBEAT_TIMEOUT, Common.IsConnectedTo));
         }
         catch (Exception ex)
         {
             Logger.Log(ex);
-            MachineStuff.MachinePool.Clear();
+            MachineStuff.MachineMatrix.RemoveAllEntries();
         }
     }
 
@@ -72,11 +92,11 @@ internal static class InitAndCleanup
             Common.DesMachineID = MachineStuff.NewDesMachineID = Common.MachineID;
 
             // MessageBox.Show(machineID.ToString(CultureInfo.CurrentCulture)); // For test
-            InitializeMachinePoolFromSettings();
+            InitializeMachineMatrixFromSettings();
 
             Common.MachineName = Common.MachineName.Trim();
-            _ = MachineStuff.MachinePool.LearnMachine(Common.MachineName);
-            _ = MachineStuff.MachinePool.TryUpdateMachineID(Common.MachineName, Common.MachineID, true);
+            _ = MachineStuff.MachineMatrix.TryAddMachine(Common.MachineName, out _);
+            _ = MachineStuff.MachineMatrix.TryUpdateMachineID(Common.MachineName, Common.MachineID, true, Common.GetTick());
 
             MachineStuff.UpdateMachinePoolStringSetting();
         }

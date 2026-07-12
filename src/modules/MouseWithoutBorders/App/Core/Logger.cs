@@ -18,6 +18,7 @@ using System.Windows.Forms;
 
 using MouseWithoutBorders.Class;
 using MouseWithoutBorders.Exceptions;
+using MouseWithoutBorders.Machines;
 
 // <summary>
 //     Logging.
@@ -244,7 +245,7 @@ internal static class Logger
             try
             {
                 if (obj is string[] or int[] or uint[] or short[] or ushort[]
-                    or MachineInf[] or TcpClient[] or IPAddress[] or TcpSk[]
+                    or MachineEntry[] or TcpClient[] or IPAddress[] or TcpSk[]
                     or TcpServer[] or ProcessThread[] or Thread[])
                 {
                     for (var i = 0; i < arr.GetLength(0); i++)
