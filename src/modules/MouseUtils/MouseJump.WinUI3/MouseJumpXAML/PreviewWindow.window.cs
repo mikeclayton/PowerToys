@@ -22,7 +22,7 @@ namespace MouseJump.WinUI3.UI;
 
 internal sealed partial class PreviewWindow
 {
-    public async Task ShowPreviewAsync()
+    public async Task ShowPreviewAsync(CancellationToken cancellationToken)
     {
         Logger.LogInfo(string.Join(
             '\n',
