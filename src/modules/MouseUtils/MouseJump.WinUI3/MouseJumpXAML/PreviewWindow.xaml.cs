@@ -5,7 +5,6 @@
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Runtime.InteropServices;
 using ManagedCommon;
 using Microsoft.PowerToys.Telemetry;
 using Microsoft.UI.Input;
@@ -16,11 +15,11 @@ using Microsoft.UI.Xaml.Media.Imaging;
 
 using MouseJump.Common.Helpers;
 using MouseJump.Common.Imaging;
-using MouseJump.Common.Interop;
 using MouseJump.Models.Display;
 using MouseJump.Models.Drawing;
 using MouseJump.Models.Layout;
 using MouseJump.WinUI3.Helpers;
+using MouseJump.WinUI3.Win32Gen;
 
 using Windows.Graphics;
 using Windows.System;
@@ -67,46 +66,28 @@ internal sealed partial class PreviewWindow : Window
             var hWnd = (HWND)WinRT.Interop.WindowNative.GetWindowHandle(this);
 
             // get the current window style
-            PInvoke.SetLastError(0);
-            var result = PInvoke.GetWindowLong(hWnd, WINDOW_LONG_PTR_INDEX.GWL_STYLE);
-            if (result == 0)
-            {
-                var lastError = Marshal.GetLastPInvokeError();
-                ResultHandler.HandleResult(result: result, success: lastError == 0, lastError: lastError, memberName: nameof(PInvoke.GetWindowLong));
-            }
+            var result = User32.GetWindowLong(hWnd, WINDOW_LONG_PTR_INDEX.GWL_STYLE)
+                .ThrowIfFailed()
+                .GetValue();
 
             // set the window to be borderless, with no title bar, and hide all of the max / min / close buttons
             var style = (WINDOW_STYLE)result;
             style &= ~WINDOW_STYLE.WS_OVERLAPPEDWINDOW;
             style |= WINDOW_STYLE.WS_POPUP;
-            PInvoke.SetLastError(0);
-            result = PInvoke.SetWindowLong(hWnd, WINDOW_LONG_PTR_INDEX.GWL_STYLE, (int)style);
-            if (result == 0)
-            {
-                var lastError = Marshal.GetLastPInvokeError();
-                ResultHandler.HandleResult(result: result, success: lastError == 0, lastError: lastError, memberName: nameof(PInvoke.SetWindowLong));
-            }
+            _ = User32.SetWindowLong(hWnd, WINDOW_LONG_PTR_INDEX.GWL_STYLE, (int)style)
+                .ThrowIfFailed();
 
             // get the current extended window style
-            PInvoke.SetLastError(0);
-            result = PInvoke.GetWindowLong(hWnd, WINDOW_LONG_PTR_INDEX.GWL_EXSTYLE);
-            if (result == 0)
-            {
-                var lastError = Marshal.GetLastPInvokeError();
-                ResultHandler.HandleResult(result: result, success: lastError == 0, lastError: lastError, memberName: nameof(PInvoke.GetWindowLong));
-            }
+            result = User32.GetWindowLong(hWnd, WINDOW_LONG_PTR_INDEX.GWL_EXSTYLE)
+                .ThrowIfFailed()
+                .GetValue();
 
             // set the window to be borderless, with no title bar, and hide all of the max / min / close buttons
             var exStyle = (WINDOW_EX_STYLE)result;
             exStyle |= WINDOW_EX_STYLE.WS_EX_TOOLWINDOW; // hide the taskbar icon
             exStyle |= WINDOW_EX_STYLE.WS_EX_TOPMOST;    // make topmost
-            PInvoke.SetLastError(0);
-            result = PInvoke.SetWindowLong(hWnd, WINDOW_LONG_PTR_INDEX.GWL_EXSTYLE, (int)exStyle);
-            if (result == 0)
-            {
-                var lastError = Marshal.GetLastPInvokeError();
-                ResultHandler.HandleResult(result: result, success: lastError == 0, lastError: lastError, memberName: nameof(PInvoke.SetWindowLong));
-            }
+            _ = User32.SetWindowLong(hWnd, WINDOW_LONG_PTR_INDEX.GWL_EXSTYLE, (int)exStyle)
+                .ThrowIfFailed();
         }
 
         this.Activated += this.PreviewWindow_Activated;
@@ -368,8 +349,9 @@ internal sealed partial class PreviewWindow : Window
     private double GetHighDpiScalingRatio()
     {
         var hWnd = (HWND)WinRT.Interop.WindowNative.GetWindowHandle(this);
-        var windowDpi = PInvoke.GetDpiForWindow(hWnd);
-        ResultHandler.ThrowIfZero(result: (int)windowDpi, getLastError: true, memberName: nameof(PInvoke.GetDpiForWindow));
+        var windowDpi = User32.GetDpiForWindow(hWnd)
+            .ThrowIfFailed()
+            .GetValue();
         var scalingRatio = (double)PInvoke.USER_DEFAULT_SCREEN_DPI / windowDpi;
         return scalingRatio;
     }
@@ -439,38 +421,17 @@ internal sealed partial class PreviewWindow : Window
                 // because WinUI3's activation sequence intermittently fails to transfer keyboard
                 // focus, which causes the Window.Activated "Deactivated" event to never fire
                 // when the user clicks away, leaving the preview window stuck open.
-                _ = PInvoke.ShowWindow(hWnd, SHOW_WINDOW_CMD.SW_SHOW);
+                _ = User32.ShowWindow(hWnd, SHOW_WINDOW_CMD.SW_SHOW)
+                    .ThrowIfFailed();
 
-                var setForegroundResult = PInvoke.SetForegroundWindow(hWnd);
-                ResultHandler.HandleResult(
-                    result: (int)setForegroundResult,
-                    success: (bool)setForegroundResult,
-                    getLastError: false,
-                    nameof(PInvoke.SetForegroundWindow));
+                _ = User32.SetForegroundWindow(hWnd)
+                    .ThrowIfFailed();
 
-                PInvoke.SetLastError(0);
-                var setFocusResult = PInvoke.SetFocus(hWnd);
-                if (setFocusResult.IsNull)
-                {
-                    var lastError = Marshal.GetLastPInvokeError();
-                    ResultHandler.HandleResult(
-                        result: setFocusResult,
-                        success: lastError == 0,
-                        lastError: lastError,
-                        nameof(PInvoke.SetFocus));
-                }
+                _ = User32.SetFocus(hWnd)
+                    .ThrowIfFailed();
 
-                PInvoke.SetLastError(0);
-                var setActiveResult = PInvoke.SetActiveWindow(hWnd);
-                if (setActiveResult.IsNull)
-                {
-                    var lastError = Marshal.GetLastPInvokeError();
-                    ResultHandler.HandleResult(
-                        result: setActiveResult,
-                        success: lastError == 0,
-                        lastError: lastError,
-                        nameof(PInvoke.SetActiveWindow));
-                }
+                _ = User32.SetActiveWindow(hWnd)
+                    .ThrowIfFailed();
             }).ConfigureAwait(false);
     }
 

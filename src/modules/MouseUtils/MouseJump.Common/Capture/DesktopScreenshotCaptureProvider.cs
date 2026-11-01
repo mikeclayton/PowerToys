@@ -110,7 +110,7 @@ public sealed class DesktopScreenshotCaptureProvider : IScreenshotCaptureProvide
 
     private static (HWND DesktopHwnd, HDC DesktopHdc) GetDesktopDeviceContext()
     {
-        var desktopHwnd = User32.GetDesktopWindow().IgnoreFailure().GetValue();
+        var desktopHwnd = User32.GetDesktopWindow().ThrowIfFailed().GetValue();
         var desktopHdc = User32.GetWindowDC(desktopHwnd).ThrowIfFailed().GetValue();
         return (desktopHwnd, desktopHdc);
     }

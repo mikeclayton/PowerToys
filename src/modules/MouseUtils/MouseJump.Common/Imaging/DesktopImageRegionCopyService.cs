@@ -5,10 +5,9 @@
 using System.Diagnostics;
 using System.Drawing;
 
-using MouseJump.Common.Interop;
+using MouseJump.Common.Win32Gen;
 using MouseJump.Models.Drawing;
 
-using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.Graphics.Gdi;
 
@@ -37,7 +36,7 @@ public sealed class DesktopImageRegionCopyService : IImageRegionCopyService
 
         var source = sourceBounds.ToRectangle();
         var target = targetBounds.ToRectangle();
-        var result = PInvoke.StretchBlt(
+        _ = Gdi32.StretchBlt(
             previewHdc,
             target.X,
             target.Y,
@@ -48,8 +47,8 @@ public sealed class DesktopImageRegionCopyService : IImageRegionCopyService
             source.Y,
             source.Width,
             source.Height,
-            ROP_CODE.SRCCOPY);
-        ResultHandler.ThrowIfZero(result: result, getLastError: false, memberName: nameof(PInvoke.StretchBlt));
+            ROP_CODE.SRCCOPY)
+            .ThrowIfFailed();
 
         // we need to release the graphics device context handle before anything
         // else tries to use the Graphics object - otherwise it'll give an error
@@ -61,9 +60,8 @@ public sealed class DesktopImageRegionCopyService : IImageRegionCopyService
 
     private static (HWND DesktopHwnd, HDC DesktopHdc) GetDesktopDeviceContext()
     {
-        var desktopHwnd = PInvoke.GetDesktopWindow();
-        var desktopHdc = PInvoke.GetWindowDC(desktopHwnd);
-        ResultHandler.HandleResult(result: desktopHdc, success: !desktopHdc.IsNull, getLastError: false, memberName: nameof(PInvoke.GetWindowDC));
+        var desktopHwnd = User32.GetDesktopWindow().ThrowIfFailed().GetValue();
+        var desktopHdc = User32.GetWindowDC(desktopHwnd).ThrowIfFailed().GetValue();
         return (desktopHwnd, desktopHdc);
     }
 
@@ -71,8 +69,8 @@ public sealed class DesktopImageRegionCopyService : IImageRegionCopyService
     {
         if (!desktopHwnd.IsNull && !desktopHdc.IsNull)
         {
-            var result = PInvoke.ReleaseDC(desktopHwnd, desktopHdc);
-            ResultHandler.ThrowIfZero(result: result, getLastError: false, memberName: nameof(PInvoke.ReleaseDC));
+            _ = User32.ReleaseDC(desktopHwnd, desktopHdc)
+                .ThrowIfFailed();
         }
 
         desktopHwnd = HWND.Null;
@@ -86,8 +84,8 @@ public sealed class DesktopImageRegionCopyService : IImageRegionCopyService
     private static HDC GetGraphicsDeviceContext(Graphics graphics, STRETCH_BLT_MODE mode)
     {
         var graphicsHdc = (HDC)graphics.GetHdc();
-        var result = PInvoke.SetStretchBltMode(graphicsHdc, mode);
-        ResultHandler.ThrowIfZero(result: result, getLastError: false, memberName: nameof(PInvoke.SetStretchBltMode));
+        _ = Gdi32.SetStretchBltMode(graphicsHdc, mode)
+            .ThrowIfFailed();
         return graphicsHdc;
     }
 
