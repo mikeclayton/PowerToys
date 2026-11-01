@@ -14,8 +14,69 @@ namespace MouseJump.Common.Helpers;
 
 public static class LayoutHelper
 {
+    /*
+
+        we use a poor-man's version of the w3c "box model" (see MouseJump.Models.Styles.BoxStyle)
+        to calculate sizes and positions of individual ui components. the diagram below shows the
+        logical organisation of components:
+
+        * the preview form - the window that displays the rendered preview image.
+
+        * the canvas - fills the form. its box style provides the preview's outer border, the
+          padding inside the border and the background fill.
+
+        * the device grid - a logical grid that arranges the devices relative to each other. it
+          doesn't exist in the layout hierarchy, and only exists as a set of temporary bounds
+          during the actual layout calculation.
+
+        * devices and screens - each device's box style provides its bezel, and each screen's
+          box style provides the border around its screenshot image.
+
+          +-------------------------------[form]------------------------------+
+          |▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒[canvas]▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒|
+          |▒▒+---------------------[device grid]----+----------------------+▒▒|
+          |▒▒|                                      |▓▓▓▓▓▓[device 2]▓▓▓▓▓▓|▒▒|
+          |▒▒|                                      |▓▓░░░░[screen 1]░░░░▓▓|▒▒|
+          |▒▒|▓▓▓▓▓▓▓▓▓▓▓▓▓▓[device 1]▓▓▓▓▓▓▓▓▓▓▓▓▓▓|▓▓░░              ░░▓▓|▒▒|
+          |▒▒|▓▓░░░░[screen 1]░░░░░░[screen 2]░░░░▓▓|▓▓░░              ░░▓▓|▒▒|
+          |▒▒|▓▓░░              ░░              ░░▓▓|▓▓░░              ░░▓▓|▒▒|
+          |▒▒|▓▓░░              ░░              ░░▓▓|▓▓░░░░░░░░░░░░░░░░░░▓▓|▒▒|
+          |▒▒|▓▓░░              ░░              ░░▓▓|▓▓░░░░[screen 2]░░░░▓▓|▒▒|
+          |▒▒|▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░▓▓|▓▓░░              ░░▓▓|▒▒|
+          |▒▒|▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓|▓▓░░              ░░▓▓|▒▒|
+          |▒▒|                                      |▓▓░░              ░░▓▓|▒▒|
+          |▒▒|                                      |▓▓░░░░░░░░░░░░░░░░░░▓▓|▒▒|
+          |▒▒|                                      |▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓|▒▒|
+          |▒▒+--------------------------------------+----------------------+▒▒|
+          |▒▒|        ▓▓▓▓▓▓[device 3]▓▓▓▓▓▓        |                      |▒▒|
+          |▒▒|        ▓▓░░░░[screen 1]░░░░▓▓        |                      |▒▒|
+          |▒▒|        ▓▓░░              ░░▓▓        |                      |▒▒|
+          |▒▒|        ▓▓░░              ░░▓▓        |   ▓▓▓[device 4]▓▓▓   |▒▒|
+          |▒▒|        ▓▓░░              ░░▓▓        |   ▓▓░[screen 1]░▓▓   |▒▒|
+          |▒▒|        ▓▓░░░░░░░░░░░░░░░░░░▓▓        |   ▓▓░░        ░░▓▓   |▒▒|
+          |▒▒|        ▓▓░░░░[screen 2]░░░░▓▓        |   ▓▓░░        ░░▓▓   |▒▒|
+          |▒▒|        ▓▓░░              ░░▓▓        |   ▓▓░░░░░░░░░░░░▓▓   |▒▒|
+          |▒▒|        ▓▓░░              ░░▓▓        |   ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓   |▒▒|
+          |▒▒|        ▓▓░░              ░░▓▓        |                      |▒▒|
+          |▒▒|        ▓▓░░░░░░░░░░░░░░░░░░▓▓        |                      |▒▒|
+          |▒▒|        ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓        |                      |▒▒|
+          |▒▒+--------------------------------------+----------------------+▒▒|
+          |▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒|
+          +-------------------------------------------------------------------+
+
+    */
+
+    /// <summary>
+    /// Returns the smallest rectangle that contains all of the specified screen bounds.
+    /// </summary>
     public static RectangleInfo GetCombinedScreenBounds(List<RectangleInfo> screenBounds)
     {
+        // we can't simply start with (0,0,0,0) and expand to encompass all screen bounds because
+        // (0,0,0,0) might not actually exist in the combined region - for example if
+        // "screenBounds = [(100, 100, 100, 100)]" we'd end up (incorrectly) with (0, 0, 200, 200).
+        // our actual approach is:
+        // * if the input is a single bounds we'll just return that
+        // * otherwise we use the *first* bounds as the seed for combining the remaining bounds
         return screenBounds.Skip(1).Aggregate(
             seed: screenBounds.First(),
             (combined, screenBounds) => combined.Union(screenBounds));
@@ -34,44 +95,6 @@ public static class LayoutHelper
         ArgumentNullException.ThrowIfNull(previewStyle);
         ArgumentNullException.ThrowIfNull(displayInfo);
         ArgumentNullException.ThrowIfNull(maximumSize);
-
-        /*
-
-           example layout:
-
-           +-------------------------------[form]------------------------------+
-           |▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒[canvas]▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒|
-           |▒▒+----------------------------[grid]----+----------------------+▒▒|
-           |▒▒|                                      |▓▓▓▓▓▓[device 2]▓▓▓▓▓▓|▒▒|
-           |▒▒|                                      |▓▓░░░░[screen 1]░░░░▓▓|▒▒|
-           |▒▒|▓▓▓▓▓▓▓▓▓▓▓▓▓▓[device 1]▓▓▓▓▓▓▓▓▓▓▓▓▓▓|▓▓░░              ░░▓▓|▒▒|
-           |▒▒|▓▓░░░░[screen 1]░░░░░░[screen 2]░░░░▓▓|▓▓░░              ░░▓▓|▒▒|
-           |▒▒|▓▓░░              ░░              ░░▓▓|▓▓░░              ░░▓▓|▒▒|
-           |▒▒|▓▓░░              ░░              ░░▓▓|▓▓░░░░░░░░░░░░░░░░░░▓▓|▒▒|
-           |▒▒|▓▓░░              ░░              ░░▓▓|▓▓░░░░[screen 2]░░░░▓▓|▒▒|
-           |▒▒|▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░▓▓|▓▓░░              ░░▓▓|▒▒|
-           |▒▒|▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓|▓▓░░              ░░▓▓|▒▒|
-           |▒▒|                                      |▓▓░░              ░░▓▓|▒▒|
-           |▒▒|                                      |▓▓░░░░░░░░░░░░░░░░░░▓▓|▒▒|
-           |▒▒|                                      |▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓|▒▒|
-           |▒▒+--------------------------------------+----------------------+▒▒|
-           |▒▒|        ▓▓▓▓▓▓[device 3]▓▓▓▓▓▓        |                      |▒▒|
-           |▒▒|        ▓▓░░░░[screen 1]░░░░▓▓        |                      |▒▒|
-           |▒▒|        ▓▓░░              ░░▓▓        |                      |▒▒|
-           |▒▒|        ▓▓░░              ░░▓▓        |   ▓▓▓[device 4]▓▓▓   |▒▒|
-           |▒▒|        ▓▓░░              ░░▓▓        |   ▓▓░[screen 1]░▓▓   |▒▒|
-           |▒▒|        ▓▓░░░░░░░░░░░░░░░░░░▓▓        |   ▓▓░░        ░░▓▓   |▒▒|
-           |▒▒|        ▓▓░░░░[screen 2]░░░░▓▓        |   ▓▓░░        ░░▓▓   |▒▒|
-           |▒▒|        ▓▓░░              ░░▓▓        |   ▓▓░░░░░░░░░░░░▓▓   |▒▒|
-           |▒▒|        ▓▓░░              ░░▓▓        |   ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓   |▒▒|
-           |▒▒|        ▓▓░░              ░░▓▓        |                      |▒▒|
-           |▒▒|        ▓▓░░░░░░░░░░░░░░░░░░▓▓        |                      |▒▒|
-           |▒▒|        ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓        |                      |▒▒|
-           |▒▒+--------------------------------------+----------------------+▒▒|
-           |▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒|
-           +-------------------------------------------------------------------+
-
-        */
 
         // arrange the form, canvas, devices and screens
         var formLayout = LayoutHelper.CreateInitialFormLayout(previewStyle, displayInfo, maximumSize);

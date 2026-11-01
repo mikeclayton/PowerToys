@@ -9,6 +9,10 @@ using MouseJump.Models.Styles;
 
 namespace MouseJump.Models.Layout;
 
+/// <summary>
+/// The layout of the canvas inside a <see cref="FormLayout"/> - the outer border, padding and
+/// background fill (via <see cref="CanvasStyle"/>), and the device/screen grid.
+/// </summary>
 public sealed class CanvasLayout
 {
     public sealed class Builder
