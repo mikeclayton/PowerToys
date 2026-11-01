@@ -46,7 +46,12 @@ public sealed class DeviceLayout
         public List<ScreenLayout.Builder>? ScreenLayouts
         {
             get;
-            init;
+#pragma warning disable CA2227 // Collection properties should be read only
+            // allow writing to collection property in DeviceLayout.Builder
+            // (it's a builder designed for convenience, and converted into
+            // an immutable CanvasLayout instance once initialised)
+            set;
+#pragma warning restore CA2227
         }
 
         public DeviceLayout Build()
