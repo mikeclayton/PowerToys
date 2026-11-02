@@ -124,6 +124,66 @@ public static class LayoutHelper
     }
 
     /// <summary>
+    /// Derives the box style a hosting window uses to wrap a <see cref="PreviewLayout"/> -
+    /// margin and border only (the actual rendered border ring around the preview), with
+    /// zero padding since there's no gap between the border's inner edge and the preview
+    /// pane's own content - the preview pane's background fills right up to its own edge.
+    /// </summary>
+    public static BoxStyle GetPreviewWindowStyle(BoxStyle canvasStyle)
+    {
+        ArgumentNullException.ThrowIfNull(canvasStyle);
+        return new BoxStyle(
+            marginStyle: canvasStyle.MarginStyle,
+            borderStyle: canvasStyle.BorderStyle,
+            paddingStyle: PaddingStyle.Empty,
+            backgroundStyle: BackgroundStyle.Empty);
+    }
+
+    /// <summary>
+    /// Derives the box style a <see cref="PreviewLayout"/> uses for its own content - zero
+    /// margin and border (both are now the hosting window's job, see
+    /// <see cref="GetPreviewWindowStyle"/>) and the padding/background the preview pane renders
+    /// itself, inset from its own bounds.
+    /// </summary>
+    public static BoxStyle GetPreviewPaneStyle(BoxStyle canvasStyle)
+    {
+        ArgumentNullException.ThrowIfNull(canvasStyle);
+        return new BoxStyle(
+            marginStyle: MarginStyle.Empty,
+            borderStyle: BorderStyle.Empty,
+            paddingStyle: canvasStyle.PaddingStyle,
+            backgroundStyle: canvasStyle.BackgroundStyle);
+    }
+
+    /// <summary>
+    /// Takes the size of a PreviewPane's layout and uses it as the baseline for calculating the
+    /// containing PreviewWindow's size. Effectively adds the outer border and margin onto the
+    /// PreviewPane size.
+    /// </summary>
+    public static BoxBounds GetPreviewWindowBounds(SizeInfo previewSize, BoxStyle previewWindowStyle)
+    {
+        ArgumentNullException.ThrowIfNull(previewSize);
+        ArgumentNullException.ThrowIfNull(previewWindowStyle);
+        var contentBounds = new RectangleInfo(0, 0, previewSize.Width, previewSize.Height);
+        return LayoutHelper.GetPreviewWindowBounds(contentBounds, previewWindowStyle);
+    }
+
+    /// <summary>
+    /// Takes the bounds of a PreviewPane's layout and uses it as the baseline
+    /// for calculating the containing PreviewWindow's size. Effectively adds
+    /// the outer border and margin onto the PreviewPane size and includes room
+    /// for a status bar of given height.
+    /// </summary>
+    public static BoxBounds GetPreviewWindowBounds(RectangleInfo previewBounds, BoxStyle previewWindowStyle)
+    {
+        ArgumentNullException.ThrowIfNull(previewBounds);
+        ArgumentNullException.ThrowIfNull(previewWindowStyle);
+        return BoxBounds.CreateFromContentBounds(
+            contentBounds: previewBounds,
+            boxStyle: previewWindowStyle);
+    }
+
+    /// <summary>
     /// Works out the maximum form size for the given constraints, and returns a
     /// <see cref="FormLayout.Builder"/> seeded with just the canvas's own bounds/style -
     /// no devices yet, see <see cref="AddDeviceAndScreenStyles"/>.
