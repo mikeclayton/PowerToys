@@ -8,8 +8,8 @@ using ManagedCommon;
 using Microsoft.PowerToys.Telemetry;
 using Microsoft.UI.Windowing;
 
+using MouseJump.Common.Capture;
 using MouseJump.Common.Helpers;
-using MouseJump.Common.Imaging;
 using MouseJump.Models.Drawing;
 using MouseJump.WinUI3.Helpers;
 using MouseJump.WinUI3.Win32Gen;
@@ -60,15 +60,15 @@ internal sealed partial class PreviewWindow
         await this.PositionWindowAsync(formBounds)
             .ConfigureAwait(false);
 
-        var imageCopyServices = displayInfo.Devices
+        var captureProviders = displayInfo.Devices
             .Select(
-                deviceInfo => (IImageRegionCopyService)new DesktopImageRegionCopyService())
+                deviceInfo => (IScreenshotCaptureProvider)new DesktopScreenshotCaptureProvider())
             .ToList();
 
         await DrawingHelper.RenderPreviewAsync(
                 this.FormLayout.CanvasLayout,
                 activatedScreen,
-                imageCopyServices,
+                captureProviders,
                 this.OnPreviewImageCreatedAsync,
                 this.OnPreviewImageUpdatedAsync)
             .ConfigureAwait(false);

@@ -20,8 +20,8 @@ using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 
+using MouseJump.Common.Capture;
 using MouseJump.Common.Helpers;
-using MouseJump.Common.Imaging;
 using MouseJump.Models.Display;
 using MouseJump.Models.Drawing;
 using MouseJump.Models.Settings;
@@ -271,11 +271,11 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
                     maximumSize: canvasSize);
 
                 var desktopImage = MouseUtilsViewModel.MouseJumpDesktopImage.Value;
-                var imageCopyService = new StaticImageRegionCopyService(desktopImage);
+                var captureProvider = new StaticScreenshotCaptureProvider(desktopImage);
                 var previewImageTask = DrawingHelper.RenderPreviewAsync(
                     previewLayout.CanvasLayout,
                     activatedScreen,
-                    new() { imageCopyService });
+                    new() { captureProvider });
                 using var previewImage = previewImageTask.GetAwaiter().GetResult();
 
                 // save the image to a memory stream

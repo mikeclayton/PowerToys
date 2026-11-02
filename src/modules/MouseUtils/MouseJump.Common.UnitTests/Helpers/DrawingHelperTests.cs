@@ -8,8 +8,8 @@ using System.Reflection;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
+using MouseJump.Common.Capture;
 using MouseJump.Common.Helpers;
-using MouseJump.Common.Imaging;
 using MouseJump.Models.Display;
 using MouseJump.Models.Drawing;
 using MouseJump.Models.Styles;
@@ -154,13 +154,13 @@ public static class DrawingHelperTests
                 displayInfo: data.DisplayInfo,
                 maximumSize: data.ActivatedScreen.DisplayArea.Size);
 
-            var imageCopyServices = formLayout.CanvasLayout.DeviceLayouts
+            var captureProviders = formLayout.CanvasLayout.DeviceLayouts
                 .Select(
-                    deviceLayout => (IImageRegionCopyService)new StaticImageRegionCopyService(desktopImage))
+                    deviceLayout => (IScreenshotCaptureProvider)new StaticScreenshotCaptureProvider(desktopImage))
                 .ToList();
 
             // draw the preview image
-            using var actual = await DrawingHelper.RenderPreviewAsync(formLayout.CanvasLayout, data.ActivatedScreen, imageCopyServices);
+            using var actual = await DrawingHelper.RenderPreviewAsync(formLayout.CanvasLayout, data.ActivatedScreen, captureProviders);
 
             // save the actual image so we can pick it up as a build artifact
             var actualFilename = Path.GetFileNameWithoutExtension(data.ExpectedImageFilename) + "_actual" + Path.GetExtension(data.ExpectedImageFilename);
@@ -294,11 +294,11 @@ public static class DrawingHelperTests
                 maximumSize: maximumSize);
 
             using var desktopImage = RenderPreviewAsyncTests.CreateSyntheticDesktopImage(desktopSize, displayInfo.Devices[0]);
-            var imageCopyServices = formLayout.CanvasLayout.DeviceLayouts
-                .Select(deviceLayout => (IImageRegionCopyService)new StaticImageRegionCopyService(desktopImage))
+            var captureProviders = formLayout.CanvasLayout.DeviceLayouts
+                .Select(deviceLayout => (IScreenshotCaptureProvider)new StaticScreenshotCaptureProvider(desktopImage))
                 .ToList();
 
-            using var actual = await DrawingHelper.RenderPreviewAsync(formLayout.CanvasLayout, activatedScreen, imageCopyServices);
+            using var actual = await DrawingHelper.RenderPreviewAsync(formLayout.CanvasLayout, activatedScreen, captureProviders);
 
             // the whole point of maximumSize is to bound the rendered image - it must
             // never come out bigger than that in either dimension...

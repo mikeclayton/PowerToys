@@ -7,7 +7,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 
-using MouseJump.Common.Imaging;
+using MouseJump.Common.Capture;
 using MouseJump.Models.Display;
 using MouseJump.Models.Drawing;
 using MouseJump.Models.Layout;
@@ -26,8 +26,8 @@ public static class DrawingHelper
     /// <param name="activatedScreen">
     /// The screen that is currently activated (i.e. the one that the user is interacting with).
     /// </param>
-    /// <param name="imageRegionCopyServices">
-    /// A list of IImageRegionCopyService implementations, one for each device in the canvas layout.
+    /// <param name="screenshotCaptureProviders">
+    /// A list of IScreenshotCaptureProvider implementations, one for each device in the canvas layout.
     /// </param>
     /// <param name="previewImageCreatedCallback">
     /// A callback that is invoked when the preview image is created.
@@ -41,7 +41,7 @@ public static class DrawingHelper
     public static async Task<Bitmap> RenderPreviewAsync(
         CanvasLayout canvasLayout,
         ScreenInfo activatedScreen,
-        List<IImageRegionCopyService> imageRegionCopyServices,
+        List<IScreenshotCaptureProvider> screenshotCaptureProviders,
         Func<Bitmap, Task>? previewImageCreatedCallback = null,
         Func<Bitmap, Task>? previewImageUpdatedCallback = null)
     {
@@ -75,7 +75,7 @@ public static class DrawingHelper
                         DeviceIndex = deviceIndex,
                         DeviceLayout = deviceLayout,
                         ScreenLayout = screenLayout,
-                        CopyService = imageRegionCopyServices[deviceIndex],
+                        CaptureProvider = screenshotCaptureProviders[deviceIndex],
                     }))
             .OrderByDescending(
                 pair => object.ReferenceEquals(pair.ScreenLayout.ScreenInfo, activatedScreen))
@@ -94,10 +94,17 @@ public static class DrawingHelper
         {
             var screenDrawingOp = screenDrawingOps[i];
 
-            screenDrawingOp.CopyService.CopyImageRegion(
-                targetGraphics: previewGraphics,
-                sourceBounds: screenDrawingOp.ScreenLayout.ScreenInfo.DisplayArea,
-                targetBounds: screenDrawingOp.ScreenLayout.ScreenBounds.ContentBounds);
+            // the capture provider owns anti-bleed/interpolation settings for its own thumbnail
+            // and hands back a bitmap already sized to the target bounds, so this is a plain
+            // 1:1 paste, not a scaled draw
+            var targetBounds = screenDrawingOp.ScreenLayout.ScreenBounds.ContentBounds.ToRectangle();
+            using (var screenshotImage = await screenDrawingOp.CaptureProvider.CaptureAsync(
+                screenDrawingOp.ScreenLayout.ScreenInfo.DisplayArea,
+                new SizeInfo(targetBounds.Size)))
+            {
+                previewGraphics.DrawImageUnscaled(screenshotImage, targetBounds.X, targetBounds.Y);
+            }
+
             refreshRequired = true;
 
             // show the placeholder images and show the form if it looks like it might take
